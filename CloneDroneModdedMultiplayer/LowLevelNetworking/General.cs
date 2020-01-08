@@ -1,0 +1,56 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Net;
+using System.Net.Sockets;
+
+namespace CloneDroneModdedMultiplayer.LowLevelNetworking
+{
+    public static partial class LowLevelNetworking
+    {
+        public const int PACKAGE_SIZE = 24;
+        public const int TARGET_TPS = 60;
+        
+        public static Thread NetworkThread;
+        public static List<Action<byte[]>> OnProcessMessageFromClient = new List<Action<byte[]>>();
+        public static List<Action<byte[]>> OnProcessMessageFromServer = new List<Action<byte[]>>();
+
+        public static List<Action<byte[]>> OnProcessMessageFromClientMainThread = new List<Action<byte[]>>();
+        public static List<Action<byte[]>> OnProcessMessageFromServerMainThread = new List<Action<byte[]>>();
+
+        static List<Action> _scheduledForMainThread = new List<Action>();
+
+        public static void ScheduleForMainThread(Action action)
+        {
+            lock(_scheduledForMainThread) {
+                _scheduledForMainThread.Add(action);
+            }
+        }
+        public static void CallAllActionsScheduled()
+        {
+            lock(_scheduledForMainThread)
+            {
+                foreach(Action item in _scheduledForMainThread)
+                {
+                    item();
+                }
+                _scheduledForMainThread.Clear();
+            }
+        }
+        
+        public static byte[] GenerateTestMessage()
+        {
+            byte[] output = new byte[PACKAGE_SIZE];
+            for(int i = 1; i < PACKAGE_SIZE; i++)
+            {
+                output[i] = (byte)i;
+            }
+            output[0] = 0; // just to make 100% sure that the msgType is 0
+            return output;
+        }
+
+    } 
+}
