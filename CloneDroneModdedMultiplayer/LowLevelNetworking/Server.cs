@@ -20,6 +20,8 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             if(NetworkThread != null || SERVER_AcceptThread != null)
                 return false;
 
+            CurrentClientType = ClientType.Server;
+
             SERVER_AcceptThread = new Thread(delegate() { SERVER_acceptThread(port); });
             NetworkThread = new Thread(SERVER_NetworkThread);
 

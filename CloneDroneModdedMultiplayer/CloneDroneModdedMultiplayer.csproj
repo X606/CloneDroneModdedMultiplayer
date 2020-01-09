@@ -72,6 +72,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HighLevelNetworking\General.cs" />
+    <Compile Include="HighLevelNetworking\NetworkMessageBase.cs" />
     <Compile Include="LowLevelNetworking\Client.cs" />
     <Compile Include="LowLevelNetworking\General.cs" />
     <Compile Include="LowLevelNetworking\LowLevelNetworkingMonoBehaviour.cs" />
