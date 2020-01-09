@@ -15,14 +15,14 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         public static List<Socket> SERVER_ConnectedClients = new List<Socket>();
         public static Thread SERVER_AcceptThread;
 
-        public static bool StartServer(int port)
+        public static bool StartServer(int port, Action<Socket> callbackOnClientConnected = null)
         {
             if(NetworkThread != null || SERVER_AcceptThread != null)
                 return false;
 
             CurrentClientType = ClientType.Server;
 
-            SERVER_AcceptThread = new Thread(delegate() { SERVER_acceptThread(port); });
+            SERVER_AcceptThread = new Thread(delegate() { SERVER_acceptThread(port, callbackOnClientConnected); });
             NetworkThread = new Thread(SERVER_NetworkThread);
 
             SERVER_AcceptThread.Start();
@@ -31,7 +31,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             return true;
         }
 
-        static void SERVER_acceptThread(int port)
+        static void SERVER_acceptThread(int port, Action<Socket> onClientConnect)
         {
             byte[] bytes = new byte[PACKAGE_SIZE];
 
@@ -48,9 +48,12 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             while(true)
             {
                 Socket handler = listener.Accept();
-
-                handler.Receive(bytes);
-                handler.Send(bytes);
+                
+                ScheduleForMainThread(delegate
+                {
+                    if (onClientConnect != null)
+                        onClientConnect(handler);
+                });
 
                 lock(SERVER_ConnectedClients)
                 {
@@ -107,7 +110,6 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         }
         static void SERVER_ProcessMessageFromClient(byte[] package)
         {
-
             lock(OnProcessMessageFromServer)
             {
                 foreach(var item in OnProcessMessageFromServer)

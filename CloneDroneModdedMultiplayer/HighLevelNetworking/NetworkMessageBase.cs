@@ -10,13 +10,20 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
     public abstract class NetworkMessageBase
     {
         public const int MAX_PACKAGE_SIZE = NetworkingCore.PACKAGE_SIZE-2;
-        public abstract short MsgID { get; }
-        public abstract string Name { get; }
-        protected abstract void OnPackageRecived(byte[] package);
 
-        public void OnRecived(byte[] package)
+        public abstract byte MsgID { get; }
+        public abstract string Name { get; }
+
+        protected virtual void OnPackageReceivedServer(byte[] package)
         {
-            if (package.Length == NetworkingCore.PACKAGE_SIZE)
+        }
+        protected virtual void OnPackageReceivedClient(byte[] package)
+        {
+        }
+
+        public void OnReceived(byte[] package, bool isServer)
+        {
+            if (package.Length == NetworkingCore.PACKAGE_SIZE) // if this is a full package and the msgtype prefix hasnt been removed, remove the msgtype prefix
             {
                 byte[] tempPackage = new byte[MAX_PACKAGE_SIZE];
                 for(int i = 0; i < MAX_PACKAGE_SIZE; i++)
@@ -29,7 +36,13 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
             if(package.Length != MAX_PACKAGE_SIZE)
                 throw new ArgumentException("The passed array must be either " + MAX_PACKAGE_SIZE + " or " + NetworkingCore.PACKAGE_SIZE + " long.", nameof(package));
 
-            OnPackageRecived(package);
+            if(isServer)
+            {
+                OnPackageReceivedServer(package);
+            } else
+            {
+                OnPackageReceivedClient(package);
+            }
         }
         public void Send(byte[] data)
         {
@@ -54,7 +67,15 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
             }
         }
 
-        private static byte[] createFullMsg(short msgID, byte[] package)
+        public short CompleteMsgID
+        {
+            get
+            {
+                return BitConverter.ToInt16(new byte[] { 0, MsgID }, 0);
+            }
+        }
+
+        static byte[] createFullMsg(short msgID, byte[] package)
         {
             if(package.Length != MAX_PACKAGE_SIZE)
                 throw new ArgumentException("The passed array must be " + MAX_PACKAGE_SIZE + " long.", nameof(package));

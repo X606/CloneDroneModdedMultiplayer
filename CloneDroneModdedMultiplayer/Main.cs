@@ -8,6 +8,8 @@ using UnityEngine;
 using System.Net;
 using System.Net.Sockets;
 using CloneDroneModdedMultiplayer.LowLevelNetworking;
+using CloneDroneModdedMultiplayer.HighLevelNetworking;
+using CloneDroneModdedMultiplayer.UI;
 
 namespace CloneDroneModdedMultiplayer
 {
@@ -20,6 +22,8 @@ namespace CloneDroneModdedMultiplayer
         {
             if(LowLevelNetworkingMonoBehaviour.Instance == null)
                 new GameObject(nameof(LowLevelNetworkingMonoBehaviour)).AddComponent<LowLevelNetworkingMonoBehaviour>();
+
+            NetworkManager.Init();
 
             NetworkingCore.OnProcessMessageFromClientMainThread.Add(delegate(byte[] msg)
             {
@@ -37,18 +41,28 @@ namespace CloneDroneModdedMultiplayer
             });
 
         }
+        public override void OnModRefreshed()
+        {
+            ModdedMultiplayerUIManager.InitUI();
+        }
 
         public override void OnCommandRan(string command)
         {
             if (command == "startServer")
             {
                 debug.Log("starting server...");
-                NetworkingCore.StartServer(606);
+                NetworkingCore.StartServer(606, delegate
+                {
+                    debug.Log("CLient connected to server!");
+                });
             }
             if(command == "startClient")
             {
                 debug.Log("starting client...");
-                NetworkingCore.StartClient("localhost", 606);
+                NetworkingCore.StartClient("localhost", 606, delegate
+                {
+                    debug.Log("Client connected!");
+                });
             }
             if(command == "serverSendMsg")
             {
@@ -60,6 +74,12 @@ namespace CloneDroneModdedMultiplayer
                 debug.Log("sending msg client...");
                 NetworkingCore.CLIENT_SendPackage(NetworkingCore.GenerateTestMessage());
             }
+        }
+        public override void OnLanugageChanged(string newLanguageID, Dictionary<string, string> localizationDictionary)
+        {
+            localizationDictionary.Add("moddedmultiplayermainmenumutton", "Play Modded Multiplayer");
+            localizationDictionary.Add("test", "test");
+            localizationDictionary.Add("test name", "test name");
         }
     }
 }

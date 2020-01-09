@@ -15,20 +15,20 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
     {
         public static Socket CLIENT_ServerConnection;
 
-        public static bool StartClient(string ip, int port)
+        public static bool StartClient(string ip, int port, Action callbackOnConnect = null)
         {
             if(NetworkThread != null)
                 return false;
 
             CurrentClientType = ClientType.Client;
 
-            NetworkThread = new Thread(delegate() { CLIENT_NetworkThread(ip, port); });
+            NetworkThread = new Thread(delegate() { CLIENT_NetworkThread(ip, port, callbackOnConnect); });
             NetworkThread.Start();
 
             return true;
         }
 
-        public static void CLIENT_NetworkThread(string ip, int port)
+        public static void CLIENT_NetworkThread(string ip, int port, Action callbackOnConnect)
         {
             byte[] buffer = new byte[PACKAGE_SIZE];
 
@@ -65,23 +65,12 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
                 return;
             }
-
-            byte[] testMsg = GenerateTestMessage();
-            CLIENT_ServerConnection.Send(testMsg);
-            CLIENT_ServerConnection.Receive(buffer);
             
 
-            if(!testMsg.SequenceEqual(buffer))
-            {
-                ScheduleForMainThread(delegate
-                {
-                    debug.Log("something went wrong");
-                });
+            Stopwatch stopwatch = new Stopwatch(); // used to measure the amount of time a "tick" takes
 
-                return;
-            }
-
-            Stopwatch stopwatch = new Stopwatch(); // used to m the amount of time a "tick" takes
+            if (callbackOnConnect != null)
+                ScheduleForMainThread(callbackOnConnect);
 
             while(true)
             {

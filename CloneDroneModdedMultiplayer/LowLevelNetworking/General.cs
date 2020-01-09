@@ -11,7 +11,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
     public static partial class NetworkingCore
     {
-        public const int PACKAGE_SIZE = 26;
+        public const int PACKAGE_SIZE = 34;
         public const int TARGET_TPS = 60;
         
         public static Thread NetworkThread;
