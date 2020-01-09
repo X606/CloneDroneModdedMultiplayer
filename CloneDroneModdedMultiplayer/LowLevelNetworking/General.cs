@@ -9,7 +9,7 @@ using System.Net.Sockets;
 
 namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
-    public static partial class LowLevelNetworking
+    public static partial class NetworkingCore
     {
         public const int PACKAGE_SIZE = 24;
         public const int TARGET_TPS = 60;

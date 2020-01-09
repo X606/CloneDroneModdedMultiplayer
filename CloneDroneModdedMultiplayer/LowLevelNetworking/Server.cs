@@ -10,7 +10,7 @@ using System.Diagnostics;
 
 namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
-    public static partial class LowLevelNetworking
+    public static partial class NetworkingCore
     {
         public static List<Socket> SERVER_ConnectedClients = new List<Socket>();
         public static Thread SERVER_AcceptThread;

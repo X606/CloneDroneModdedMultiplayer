@@ -11,7 +11,7 @@ using System.Diagnostics;
 
 namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
-    public static partial class LowLevelNetworking
+    public static partial class NetworkingCore
     {
         public static Socket CLIENT_ServerConnection;
 

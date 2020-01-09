@@ -11,7 +11,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
     {
         void Update()
         {
-            LowLevelNetworking.CallAllActionsScheduled();
+            NetworkingCore.CallAllActionsScheduled();
         }
     }
 }

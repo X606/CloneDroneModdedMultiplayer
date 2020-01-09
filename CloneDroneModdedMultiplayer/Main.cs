@@ -21,14 +21,14 @@ namespace CloneDroneModdedMultiplayer
             if(LowLevelNetworkingMonoBehaviour.Instance == null)
                 new GameObject(nameof(LowLevelNetworkingMonoBehaviour)).AddComponent<LowLevelNetworkingMonoBehaviour>();
 
-            LowLevelNetworking.LowLevelNetworking.OnProcessMessageFromClientMainThread.Add(delegate(byte[] msg)
+            LowLevelNetworking.NetworkingCore.OnProcessMessageFromClientMainThread.Add(delegate(byte[] msg)
             {
                 for(int i = 0; i < msg.Length; i++)
                 {
                     debug.Log(msg[i]);
                 }
             });
-            LowLevelNetworking.LowLevelNetworking.OnProcessMessageFromServerMainThread.Add(delegate (byte[] msg)
+            LowLevelNetworking.NetworkingCore.OnProcessMessageFromServerMainThread.Add(delegate (byte[] msg)
             {
                 for(int i = 0; i < msg.Length; i++)
                 {
@@ -43,22 +43,22 @@ namespace CloneDroneModdedMultiplayer
             if (command == "startServer")
             {
                 debug.Log("starting server...");
-                LowLevelNetworking.LowLevelNetworking.StartServer(606);
+                LowLevelNetworking.NetworkingCore.StartServer(606);
             }
             if(command == "startClient")
             {
                 debug.Log("starting client...");
-                LowLevelNetworking.LowLevelNetworking.StartClient("localhost", 606);
+                LowLevelNetworking.NetworkingCore.StartClient("localhost", 606);
             }
             if(command == "serverSendMsg")
             {
                 debug.Log("sending msg server...");
-                LowLevelNetworking.LowLevelNetworking.SERVER_SendMessageToAllClients(LowLevelNetworking.LowLevelNetworking.GenerateTestMessage());
+                LowLevelNetworking.NetworkingCore.SERVER_SendMessageToAllClients(LowLevelNetworking.NetworkingCore.GenerateTestMessage());
             }
             if (command == "clientSendMsg")
             {
                 debug.Log("sending msg client...");
-                LowLevelNetworking.LowLevelNetworking.CLIENT_SendPackage(LowLevelNetworking.LowLevelNetworking.GenerateTestMessage());
+                LowLevelNetworking.NetworkingCore.CLIENT_SendPackage(LowLevelNetworking.NetworkingCore.GenerateTestMessage());
             }
         }
     }
