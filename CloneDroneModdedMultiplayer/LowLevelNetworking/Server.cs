@@ -48,12 +48,9 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             while(true)
             {
                 Socket handler = listener.Accept();
-                
-                ScheduleForMainThread(delegate
-                {
-                    if (onClientConnect != null)
-                        onClientConnect(handler);
-                });
+
+                if(onClientConnect != null)
+                    onClientConnect(handler);
 
                 lock(SERVER_ConnectedClients)
                 {

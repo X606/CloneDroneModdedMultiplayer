@@ -70,7 +70,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             Stopwatch stopwatch = new Stopwatch(); // used to measure the amount of time a "tick" takes
 
             if (callbackOnConnect != null)
-                ScheduleForMainThread(callbackOnConnect);
+                    callbackOnConnect();
 
             while(true)
             {

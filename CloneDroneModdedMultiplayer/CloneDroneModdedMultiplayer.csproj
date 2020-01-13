@@ -86,11 +86,14 @@
   <ItemGroup>
     <Compile Include="HighLevelNetworking\NetworkManager.cs" />
     <Compile Include="HighLevelNetworking\NetworkMessageBase.cs" />
+    <Compile Include="Internal\ServerRunner.cs" />
     <Compile Include="LowLevelNetworking\Client.cs" />
     <Compile Include="LowLevelNetworking\General.cs" />
     <Compile Include="LowLevelNetworking\LowLevelNetworkingMonoBehaviour.cs" />
     <Compile Include="LowLevelNetworking\Server.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="Patches.cs" />
+    <Compile Include="PathUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\ModdedMultiplayerUIManager.cs" />
   </ItemGroup>

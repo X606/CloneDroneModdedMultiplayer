@@ -39,15 +39,21 @@ namespace CloneDroneModdedMultiplayer.UI
                 setLogoAndRootButtonsVisible(true);
             });
 
+            UnityEngine.Events.UnityEvent unityEvent = new UnityEngine.Events.UnityEvent();
+            unityEvent.AddListener(delegate ()
+            {
+                ModdedMultiplayerSelectScreen.Hide();
+                Internal.ServerRunner.StartServer();
+            });
+
             ModdedMultiplayerSelectScreen.GameModeData = new GameModeCardData[1];
             ModdedMultiplayerSelectScreen.GameModeData[0] = new GameModeCardData()
             {
                 Description = "test",
                 NameOfMode = "test name",
-                DisableOnConsoles = true
+                DisableOnConsoles = true,
+                ClickedCallback = unityEvent
             };
-
-            debug.PrintAllChildren(ModdedMultiplayerSelectScreen.transform);
         }
         public static void OnModdedMultiplayerClicked()
         {

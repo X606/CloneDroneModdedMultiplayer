@@ -10,11 +10,17 @@ using System.Net.Sockets;
 using CloneDroneModdedMultiplayer.LowLevelNetworking;
 using CloneDroneModdedMultiplayer.HighLevelNetworking;
 using CloneDroneModdedMultiplayer.UI;
+using CloneDroneModdedMultiplayer.Patches;
+using CloneDroneModdedMultiplayer.Internal;
 
 namespace CloneDroneModdedMultiplayer
 {
     public class Main : Mod
     {
+        static bool _hasInjected = false;
+
+        public const GameMode MODDED_MULTIPLAYER_TEXT_GAMEMODE = (GameMode)2526;
+
         public override string GetModName() => "Clone drone modded multiplayer";
         public override string GetUniqueID() => "33f5eff2-e81f-444e-89d4-924b5c472616";
 
@@ -41,6 +47,21 @@ namespace CloneDroneModdedMultiplayer
             });
 
         }
+        public override void OnModEnabled()
+        {
+            if(!_hasInjected)
+            {
+                Injector.InjectPrefix<LevelManager, GetLevelDescriptionsPatches>("getLevelDescriptions", "Prefix", this);
+                Injector.InjectPostfix<LevelManager, GetLevelDescriptionsPatches>("getLevelDescriptions", "Postfix", this);
+
+                Injector.InjectPostfix<GameDataManager, GetCurrentGameDataPatches>("getCurrentGameData", "Postpatch", this);
+                
+                Injector.InjectPostfix<GameModeManager, GameModeManagerAllowsLevelsWithNoEnemiesPatch>("AllowsLevelsWithNoEnemies", "PostPatch", this);
+
+                _hasInjected = true;
+            }
+
+        }
         public override void OnModRefreshed()
         {
             ModdedMultiplayerUIManager.InitUI();
@@ -48,32 +69,38 @@ namespace CloneDroneModdedMultiplayer
 
         public override void OnCommandRan(string command)
         {
-            if (command == "startServer")
-            {
-                debug.Log("starting server...");
-                NetworkingCore.StartServer(606, delegate
-                {
-                    debug.Log("CLient connected to server!");
-                });
-            }
-            if(command == "startClient")
+            string[] subCommand = command.Split(" ".ToCharArray());
+            if(subCommand[0].ToLower() == "connect")
             {
                 debug.Log("starting client...");
-                NetworkingCore.StartClient("localhost", 606, delegate
+
+                ServerRunner.StartClient(subCommand[1], 606);
+
+                /*NetworkingCore.StartClient(subCommand[1], 606, delegate
                 {
-                    debug.Log("Client connected!");
+                    NetworkingCore.ScheduleForMainThread(delegate
+                    {
+                        debug.Log("connected!");
+                    });
+                });*/
+
+                
+                
+                //ServerRunner.StartClient(subCommand[1]);
+            }
+            if (subCommand[0].ToLower() == "startserver")
+            {
+                debug.Log("starting server...");
+
+                NetworkingCore.StartServer(606, delegate(Socket socket)
+                {
+                    NetworkingCore.ScheduleForMainThread(delegate
+                    {
+                        debug.Log("client Connected!");
+                    });
                 });
             }
-            if(command == "serverSendMsg")
-            {
-                debug.Log("sending msg server...");
-                NetworkingCore.SERVER_SendMessageToAllClients(NetworkingCore.GenerateTestMessage());
-            }
-            if (command == "clientSendMsg")
-            {
-                debug.Log("sending msg client...");
-                NetworkingCore.CLIENT_SendPackage(NetworkingCore.GenerateTestMessage());
-            }
+
         }
         public override void OnLanugageChanged(string newLanguageID, Dictionary<string, string> localizationDictionary)
         {
