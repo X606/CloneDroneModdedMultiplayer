@@ -64,6 +64,9 @@ namespace CloneDroneModdedMultiplayer
         }
         public override void OnModRefreshed()
         {
+            if(!BitConverter.IsLittleEndian)
+                Debug.LogError("Sadly your system is not supported by the multiplayer mod. :(");
+
             ModdedMultiplayerUIManager.InitUI();
         }
 
