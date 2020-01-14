@@ -9,7 +9,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 {
     public abstract class NetworkMessageBase
     {
-        public const int MAX_PACKAGE_SIZE = NetworkingCore.PACKAGE_SIZE-2;
+        public const int MAX_PACKAGE_SIZE = NetworkingCore.UdpPackageSize-2;
 
         public abstract byte MsgID { get; }
         public abstract string Name { get; }
@@ -23,7 +23,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 
         public void OnReceived(byte[] package, bool isServer)
         {
-            if (package.Length == NetworkingCore.PACKAGE_SIZE) // if this is a full package and the msgtype prefix hasnt been removed, remove the msgtype prefix
+            if (package.Length == NetworkingCore.UdpPackageSize) // if this is a full package and the msgtype prefix hasnt been removed, remove the msgtype prefix
             {
                 byte[] tempPackage = new byte[MAX_PACKAGE_SIZE];
                 for(int i = 0; i < MAX_PACKAGE_SIZE; i++)
@@ -34,7 +34,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
             }
 
             if(package.Length != MAX_PACKAGE_SIZE)
-                throw new ArgumentException("The passed array must be either " + MAX_PACKAGE_SIZE + " or " + NetworkingCore.PACKAGE_SIZE + " long.", nameof(package));
+                throw new ArgumentException("The passed array must be either " + MAX_PACKAGE_SIZE + " or " + NetworkingCore.UdpPackageSize + " long.", nameof(package));
 
             if(isServer)
             {
@@ -80,7 +80,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
             if(package.Length != MAX_PACKAGE_SIZE)
                 throw new ArgumentException("The passed array must be " + MAX_PACKAGE_SIZE + " long.", nameof(package));
 
-            byte[] fullMsg = new byte[NetworkingCore.PACKAGE_SIZE];
+            byte[] fullMsg = new byte[NetworkingCore.UdpPackageSize];
             
             if (!BitConverter.IsLittleEndian)
                 throw new NotImplementedException("non little endian systems not supported for now"); // TODO: Support non little endian systems
@@ -90,7 +90,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
             {
                 fullMsg[i] = prefix[i];
             }
-            for(int i = 2; i < NetworkingCore.PACKAGE_SIZE; i++)
+            for(int i = 2; i < NetworkingCore.UdpPackageSize; i++)
             {
                 fullMsg[i] = package[i-2];
             }

@@ -13,119 +13,138 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
     public static partial class NetworkingCore
     {
-        public static Socket CLIENT_ServerConnection;
+        public static Socket CLIENT_TcpServerConnection;
+        public static Socket CLIENT_UdpServerConnection;
+        public static EndPoint CLIENT_ServerEndpoint;
+
+        static Queue<QueuedNetworkMessage> _queuedTcpNetworkMessages = new Queue<QueuedNetworkMessage>();
+        static Queue<QueuedNetworkMessage> _queuedUdpNetworkMessages = new Queue<QueuedNetworkMessage>();
 
         public static bool StartClient(string ip, int port, Action callbackOnConnect = null)
         {
-            if(NetworkThread != null)
-                return false;
-
             CurrentClientType = ClientType.Client;
 
-            NetworkThread = new Thread(delegate() { CLIENT_NetworkThread(ip, port, callbackOnConnect); });
-            NetworkThread.Start();
+            IPAddress adress = IPAddress.Parse(ip);
+            CLIENT_ServerEndpoint = new IPEndPoint(adress, port);
+
+            CLIENT_TcpServerConnection = TcpConnect((IPEndPoint)CLIENT_ServerEndpoint);
+            CLIENT_UdpServerConnection = UdpConnect((IPEndPoint)CLIENT_ServerEndpoint);
+
+            new Thread(CLIENT_Mainloop).Start();
 
             return true;
         }
 
-        public static void CLIENT_NetworkThread(string ip, int port, Action callbackOnConnect)
+        public static Socket TcpConnect(IPEndPoint endPoint)
         {
-            byte[] buffer = new byte[PACKAGE_SIZE];
+            Socket connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            connection.Connect(endPoint);
 
+            if(!connection.Connected)
+                throw new Exception("Could not connect");
 
-            IPHostEntry hostEntry = Dns.GetHostEntry(ip);
-            if (ip == "localhost")
-            {
-                hostEntry = Dns.GetHostEntry(Dns.GetHostName());
-            }
+            return connection;
+        }
+        public static Socket UdpConnect(IPEndPoint endPoint)
+        {
+            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            return socket;
+        }
 
-            foreach(IPAddress address in hostEntry.AddressList) // if there are more than 1 servers on the ip
-            {
-                IPEndPoint ipe = new IPEndPoint(address, port);
-                Socket tempSocket = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-                tempSocket.Connect(ipe);
-
-                if(tempSocket.Connected)
-                {
-                    CLIENT_ServerConnection = tempSocket;
-                    break;
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            if(CLIENT_ServerConnection == null)
-            {
-                ScheduleForMainThread(delegate
-                {
-                    debug.Log("Could not connect");
-                });
-
-                return;
-            }
-            
-
-            Stopwatch stopwatch = new Stopwatch(); // used to measure the amount of time a "tick" takes
-
-            if (callbackOnConnect != null)
-                    callbackOnConnect();
-
+        public static void CLIENT_Mainloop()
+        {
+            Stopwatch stopwatch = new Stopwatch();
             while(true)
             {
                 stopwatch.Start();
-                lock(CLIENT_ServerConnection)
+                
+                // getting messages
+                while(CLIENT_TcpServerConnection.Available > 0)
                 {
-                    while(CLIENT_ServerConnection.Available > 0)
+                    byte[] buffer = new byte[sizeof(int)];
+                    CLIENT_TcpServerConnection.Receive(buffer, 0, buffer.Length, SocketFlags.None);
+                    int length = BitConverter.ToInt32(buffer, 0);
+                    buffer = new byte[length];
+                    CLIENT_TcpServerConnection.Receive(buffer, 0, length, SocketFlags.None);
+                    OnClientTcpMessage(buffer);
+                }
+                byte[] udpBuffer = new byte[UdpPackageSize];
+                while(CLIENT_UdpServerConnection.Available > 0)
+                {
+                    CLIENT_UdpServerConnection.ReceiveFrom(udpBuffer, 0, UdpPackageSize, SocketFlags.None, ref CLIENT_ServerEndpoint);
+                    OnClientUdpMessage(udpBuffer);
+                }
+
+                // sending messages
+                lock(_queuedTcpNetworkMessages)
+                {
+                    while(_queuedTcpNetworkMessages.Count > 0)
                     {
-                        CLIENT_ServerConnection.Receive(buffer);
-                        CLIENT_ProcessMessageFromServer(buffer);
+                        QueuedNetworkMessage networkMessage = _queuedTcpNetworkMessages.Dequeue();
+                        int msgLength = networkMessage.DataToSend.Length;
+                        byte[] buffer = new byte[msgLength + sizeof(int)];
+                        Buffer.BlockCopy(BitConverter.GetBytes(msgLength), 0, buffer, 0, sizeof(int)); // copies the bytes of msgLength into the first 4 slots of the buffer
+                        Buffer.BlockCopy(networkMessage.DataToSend, 0, buffer, sizeof(int), msgLength);
+
+                        CLIENT_TcpServerConnection.Send(buffer);
+                    }
+                }
+                lock(_queuedUdpNetworkMessages)
+                {
+                    while(_queuedUdpNetworkMessages.Count > 0)
+                    {
+                        QueuedNetworkMessage networkMessage = _queuedUdpNetworkMessages.Dequeue();
+                        CLIENT_TcpServerConnection.SendTo(networkMessage.DataToSend, CLIENT_ServerEndpoint);
                     }
                 }
 
                 stopwatch.Stop();
-                if(stopwatch.ElapsedMilliseconds < 1000/TARGET_TPS) // to make sure we dont hog up the cpu more than we need to
+                int time = (int)stopwatch.ElapsedMilliseconds;
+                if (time < 1000/TARGET_TPS)
                 {
-                    int milisecondsToWait = (1000/TARGET_TPS) - (int)stopwatch.ElapsedMilliseconds;
-                    Thread.Sleep(milisecondsToWait);
+                    Thread.Sleep((1000/TARGET_TPS)-time);
                 }
                 stopwatch.Reset();
             }
         }
-        public static void CLIENT_SendPackage(byte[] package)
-        {
-            if(package.Length != PACKAGE_SIZE)
-                throw new ArgumentException("the passed package must have a size of " + PACKAGE_SIZE);
 
-            new Thread(delegate ()
-            {
-                lock(CLIENT_ServerConnection)
-                {
-                    CLIENT_ServerConnection.Send(package, PACKAGE_SIZE, SocketFlags.None);
-                }
-            }).Start();
-        }
-        public static void CLIENT_ProcessMessageFromServer(byte[] package)
+        public static void OnClientTcpMessage(byte[] bytes)
         {
-            lock(OnProcessMessageFromClient)
+
+        }
+        public static void OnClientUdpMessage(byte[] bytes)
+        {
+
+        }
+
+        public static void SendClientTcpMessage(byte[] bytes)
+        {
+            lock(_queuedTcpNetworkMessages)
             {
-                foreach(var item in OnProcessMessageFromClient)
+                _queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
                 {
-                    item(package);
-                }
+                    DataToSend = bytes
+                });
             }
-            ScheduleForMainThread(delegate
+        }
+        public static void SendClientUdpMessage(byte[] bytes)
+        {
+            if(bytes.Length != UdpPackageSize)
+                throw new Exception("All Udp messages must be " + UdpPackageSize + " bytes long.");
+            lock(_queuedUdpNetworkMessages)
             {
-                lock(OnProcessMessageFromServerMainThread)
+                _queuedUdpNetworkMessages.Enqueue(new QueuedNetworkMessage()
                 {
-                    foreach(var item in OnProcessMessageFromServerMainThread)
-                    {
-                        item(package);
-                    }
-                }
-            });
+                    DataToSend = bytes
+                });
+            }
+
         }
 
+    }
+
+    public class QueuedNetworkMessage
+    {
+        public byte[] DataToSend;
     }
 }
