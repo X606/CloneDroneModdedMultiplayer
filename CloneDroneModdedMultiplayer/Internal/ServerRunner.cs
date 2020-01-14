@@ -126,7 +126,7 @@ namespace CloneDroneModdedMultiplayer.Internal
             byte[] buffer = new byte[length];
             socket.Receive(buffer);
 
-            string path = Application.dataPath + "/ModdedLevels/"+TEMP_MAP_NAME;
+            string path = Application.persistentDataPath + "/ModdedLevels/"+TEMP_MAP_NAME;
             File.WriteAllBytes(path, buffer);
             return path;
         }

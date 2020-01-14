@@ -67,6 +67,13 @@ namespace CloneDroneModdedMultiplayer
             if(!BitConverter.IsLittleEndian)
                 Debug.LogError("Sadly your system is not supported by the multiplayer mod. :(");
 
+            string path = Application.persistentDataPath + "/ModdedLevels/";
+
+            if (!System.IO.Directory.Exists(path))
+            {
+                System.IO.Directory.CreateDirectory(path);
+            }
+
             ModdedMultiplayerUIManager.InitUI();
         }
 

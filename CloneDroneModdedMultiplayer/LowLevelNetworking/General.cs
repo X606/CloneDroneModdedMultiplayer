@@ -37,7 +37,13 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             {
                 foreach(Action item in _scheduledForMainThread)
                 {
-                    item();
+                    try
+                    {
+                        item();
+                    } catch(Exception e)
+                    {
+                        UnityEngine.Debug.LogError(e.ToString());
+                    }
                 }
                 _scheduledForMainThread.Clear();
             }

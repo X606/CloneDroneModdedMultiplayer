@@ -54,9 +54,9 @@ namespace CloneDroneModdedMultiplayer.Patches
                         LevelID = splitPath[splitPath.Length-1],
                         LevelTags = new List<LevelTags>()
                     });
-                    debug.Log(splitPath[splitPath.Length-1]);
+                    
                 }
-                debug.Log(levels);
+
                 return levels;
             }
         }
