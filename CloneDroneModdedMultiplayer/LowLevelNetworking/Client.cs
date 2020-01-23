@@ -13,22 +13,25 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
     public static partial class NetworkingCore
     {
-        public static Socket CLIENT_TcpServerConnection;
-        public static Socket CLIENT_UdpServerConnection;
-        public static EndPoint CLIENT_ServerEndpoint;
+		public static volatile ConnectedClient CLIENT_ServerConnection;
 
-        static Queue<QueuedNetworkMessage> _queuedTcpNetworkMessages = new Queue<QueuedNetworkMessage>();
-        static Queue<QueuedNetworkMessage> _queuedUdpNetworkMessages = new Queue<QueuedNetworkMessage>();
+		public static event Action<byte[]> OnClientTcpMessage;
+		public static event Action<byte[]> OnClientUdpMessage;
+
+		static Queue<QueuedNetworkMessage> _CLIENT_queuedTcpNetworkMessages = new Queue<QueuedNetworkMessage>();
+        static Queue<QueuedNetworkMessage> _CLIENT_queuedUdpNetworkMessages = new Queue<QueuedNetworkMessage>();
 
         public static bool StartClient(string ip, int port, Action callbackOnConnect = null)
         {
             CurrentClientType = ClientType.Client;
 
             IPAddress adress = IPAddress.Parse(ip);
-            CLIENT_ServerEndpoint = new IPEndPoint(adress, port);
+            EndPoint serverEndpoint = new IPEndPoint(adress, port);
 
-            CLIENT_TcpServerConnection = TcpConnect((IPEndPoint)CLIENT_ServerEndpoint);
-            CLIENT_UdpServerConnection = UdpConnect((IPEndPoint)CLIENT_ServerEndpoint);
+            Socket tcpSocket = TcpConnect((IPEndPoint)serverEndpoint);
+            Socket UdpSocket = UdpConnect((IPEndPoint)serverEndpoint);
+			CLIENT_ServerConnection = new ConnectedClient(tcpSocket, UdpSocket, serverEndpoint);
+			callbackOnConnect();
 
             new Thread(CLIENT_Mainloop).Start();
 
@@ -59,42 +62,33 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
                 stopwatch.Start();
                 
                 // getting messages
-                while(CLIENT_TcpServerConnection.Available > 0)
+                while(CLIENT_ServerConnection.TcpConnection.Available > 0)
                 {
-                    byte[] buffer = new byte[sizeof(int)];
-                    CLIENT_TcpServerConnection.Receive(buffer, 0, buffer.Length, SocketFlags.None);
-                    int length = BitConverter.ToInt32(buffer, 0);
-                    buffer = new byte[length];
-                    CLIENT_TcpServerConnection.Receive(buffer, 0, length, SocketFlags.None);
+					byte[] buffer = CLIENT_ServerConnection.TcpRecive();
                     OnClientTcpMessage(buffer);
                 }
-                byte[] udpBuffer = new byte[UdpPackageSize];
-                while(CLIENT_UdpServerConnection.Available > 0)
+                
+                while(CLIENT_ServerConnection.UdpConnection.Available > 0)
                 {
-                    CLIENT_UdpServerConnection.ReceiveFrom(udpBuffer, 0, UdpPackageSize, SocketFlags.None, ref CLIENT_ServerEndpoint);
-                    OnClientUdpMessage(udpBuffer);
+					byte[] buffer = CLIENT_ServerConnection.UdpRecive();
+					OnClientUdpMessage(buffer);
                 }
 
                 // sending messages
-                lock(_queuedTcpNetworkMessages)
+                lock(_CLIENT_queuedTcpNetworkMessages)
                 {
-                    while(_queuedTcpNetworkMessages.Count > 0)
+                    while(_CLIENT_queuedTcpNetworkMessages.Count > 0)
                     {
-                        QueuedNetworkMessage networkMessage = _queuedTcpNetworkMessages.Dequeue();
-                        int msgLength = networkMessage.DataToSend.Length;
-                        byte[] buffer = new byte[msgLength + sizeof(int)];
-                        Buffer.BlockCopy(BitConverter.GetBytes(msgLength), 0, buffer, 0, sizeof(int)); // copies the bytes of msgLength into the first 4 slots of the buffer
-                        Buffer.BlockCopy(networkMessage.DataToSend, 0, buffer, sizeof(int), msgLength);
-
-                        CLIENT_TcpServerConnection.Send(buffer);
+                        QueuedNetworkMessage networkMessage = _CLIENT_queuedTcpNetworkMessages.Dequeue();
+						CLIENT_ServerConnection.TcpSend(networkMessage.DataToSend);
                     }
                 }
-                lock(_queuedUdpNetworkMessages)
+                lock(_CLIENT_queuedUdpNetworkMessages)
                 {
-                    while(_queuedUdpNetworkMessages.Count > 0)
+                    while(_CLIENT_queuedUdpNetworkMessages.Count > 0)
                     {
-                        QueuedNetworkMessage networkMessage = _queuedUdpNetworkMessages.Dequeue();
-                        CLIENT_TcpServerConnection.SendTo(networkMessage.DataToSend, CLIENT_ServerEndpoint);
+                        QueuedNetworkMessage networkMessage = _CLIENT_queuedUdpNetworkMessages.Dequeue();
+						CLIENT_ServerConnection.UdpSend(networkMessage.DataToSend);
                     }
                 }
 
@@ -108,20 +102,11 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             }
         }
 
-        public static void OnClientTcpMessage(byte[] bytes)
-        {
-
-        }
-        public static void OnClientUdpMessage(byte[] bytes)
-        {
-
-        }
-
         public static void SendClientTcpMessage(byte[] bytes)
         {
-            lock(_queuedTcpNetworkMessages)
+            lock(_CLIENT_queuedTcpNetworkMessages)
             {
-                _queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
+                _CLIENT_queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
                 {
                     DataToSend = bytes
                 });
@@ -131,9 +116,9 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         {
             if(bytes.Length != UdpPackageSize)
                 throw new Exception("All Udp messages must be " + UdpPackageSize + " bytes long.");
-            lock(_queuedUdpNetworkMessages)
+            lock(_CLIENT_queuedUdpNetworkMessages)
             {
-                _queuedUdpNetworkMessages.Enqueue(new QueuedNetworkMessage()
+                _CLIENT_queuedUdpNetworkMessages.Enqueue(new QueuedNetworkMessage()
                 {
                     DataToSend = bytes
                 });
@@ -141,10 +126,5 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
         }
 
-    }
-
-    public class QueuedNetworkMessage
-    {
-        public byte[] DataToSend;
     }
 }

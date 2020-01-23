@@ -71,7 +71,8 @@ namespace CloneDroneModdedMultiplayer.Patches
             {
                 return Internal.ServerRunner.CurrentGameData;
             }
-            
+
+
             return __result;
         }
     }

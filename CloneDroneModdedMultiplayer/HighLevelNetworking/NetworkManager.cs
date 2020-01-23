@@ -9,7 +9,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 {
     public static class NetworkManager
     {
-        static Dictionary<short, NetworkMessageBase> _networkMessagesDictionary = new Dictionary<short, NetworkMessageBase>();
+        static Dictionary<MessageID, NetworkMessageBase> _networkMessagesDictionary = new Dictionary<MessageID, NetworkMessageBase>();
         public static void AddNetworkMessage(NetworkMessageBase networkMessage)
         {
             if(_networkMessagesDictionary.ContainsKey(networkMessage.MsgID))
@@ -20,27 +20,31 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 
         public static void Init()
         {
-            NetworkingCore.OnProcessMessageFromClientMainThread.Add(delegate(byte[] data)
-            {
-                OnPackageRecived(data, false);
-            });
-            NetworkingCore.OnProcessMessageFromServerMainThread.Add(delegate (byte[] data)
-            {
-                OnPackageRecived(data, true);
-            });
-        }
+			NetworkingCore.SERVER_CallbackOnClientConnected += SERVER_OnClientConnected;
+			NetworkingCore.OnServerTcpMessage += (ConnectedClient client, byte[] data) => OnMessage(data, true);
+			NetworkingCore.OnServerUdpMessage += (ConnectedClient client, byte[] data) => OnMessage(data, true);
+			NetworkingCore.OnClientTcpMessage += (byte[] data) => OnMessage(data, false);
+			NetworkingCore.OnClientUdpMessage += (byte[] data) => OnMessage(data, false);
+		}
 
-        public static void OnPackageRecived(byte[] package, bool isServer)
-        {
-            short msgID = BitConverter.ToInt16(package, 0); // get the msgID of the recived package
+		static void SERVER_OnClientConnected(ConnectedClient obj)
+		{
+		}
 
-            if(!_networkMessagesDictionary.ContainsKey(msgID))
-                throw new NotImplementedException("No message with id " + msgID + " found!");
+		static void OnMessage(byte[] arg2, bool isServer)
+		{
+			MessageID messageID = new MessageID(arg2);
+			if (_networkMessagesDictionary.TryGetValue(messageID, out NetworkMessageBase networkMessage))
+			{
+				byte[] buffer = new byte[arg2.Length-sizeof(ushort)];
+				Buffer.BlockCopy(arg2, 2, buffer, 0, arg2.Length);
 
-            NetworkMessageBase messageBase = _networkMessagesDictionary[msgID];
-
-            messageBase.OnReceived(package, isServer); // on recived will remove the id from the front
-        }
+				networkMessage.OnReceived(buffer, isServer);
+			} else
+			{
+				throw new NotImplementedException("No message with id " + messageID + " found!");
+			}
+		}
 
     }
 }

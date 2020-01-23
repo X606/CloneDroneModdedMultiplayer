@@ -9,10 +9,11 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 {
     public abstract class NetworkMessageBase
     {
-        public const int MAX_PACKAGE_SIZE = NetworkingCore.UdpPackageSize-2;
+        public const int MAX_UNSAFE_PACKAGE_SIZE = NetworkingCore.UdpPackageSize-2;
 
-        public abstract byte MsgID { get; }
+        public abstract MessageID MsgID { get; }
         public abstract string Name { get; }
+		public abstract MsgChannel Channel { get; }
 
         protected virtual void OnPackageReceivedServer(byte[] package)
         {
@@ -23,79 +24,81 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 
         public void OnReceived(byte[] package, bool isServer)
         {
-            if (package.Length == NetworkingCore.UdpPackageSize) // if this is a full package and the msgtype prefix hasnt been removed, remove the msgtype prefix
-            {
-                byte[] tempPackage = new byte[MAX_PACKAGE_SIZE];
-                for(int i = 0; i < MAX_PACKAGE_SIZE; i++)
-                {
-                    tempPackage[i] = package[i+2];
-                }
-                package = tempPackage;
-            }
+            if (NetworkingCore.CurrentClientType == ClientType.Client)
+			{
+				OnPackageReceivedClient(package);
+			}
+			else if(NetworkingCore.CurrentClientType == ClientType.Server)
+			{
+				OnPackageReceivedServer(package);
+			}
 
-            if(package.Length != MAX_PACKAGE_SIZE)
-                throw new ArgumentException("The passed array must be either " + MAX_PACKAGE_SIZE + " or " + NetworkingCore.UdpPackageSize + " long.", nameof(package));
-
-            if(isServer)
-            {
-                OnPackageReceivedServer(package);
-            } else
-            {
-                OnPackageReceivedClient(package);
-            }
-        }
+		}
         public void Send(byte[] data)
         {
-            if(data.Length != MAX_PACKAGE_SIZE)
-                throw new ArgumentException("The passed array must be " + MAX_PACKAGE_SIZE + " long.", nameof(data));
+            if(Channel == MsgChannel.Unsafe && data.Length != MAX_UNSAFE_PACKAGE_SIZE)
+                throw new ArgumentException("The passed array must be " + MAX_UNSAFE_PACKAGE_SIZE + " long if the channel is set to unsafe", nameof(data));
 
-            byte[] fullData = createFullMsg(MsgID, data);
+			byte[] msg = createFullMsg(MsgID, data);
 
-            ClientType clientType = NetworkingCore.CurrentClientType;
-            switch(clientType)
-            {
-                case ClientType.Server:
-                    NetworkingCore.SERVER_SendMessageToAllClients(fullData);
-                break;
-                case ClientType.Client:
-                NetworkingCore.CLIENT_SendPackage(fullData);
-                break;
+			if (NetworkingCore.CurrentClientType == ClientType.Client)
+			{
+				if (Channel == MsgChannel.Safe)
+				{
+					NetworkingCore.SendClientTcpMessage(msg);
+				}
+				else if (Channel == MsgChannel.Unsafe)
+				{
+					NetworkingCore.SendClientUdpMessage(msg);
+				}
+			}
+			else if (NetworkingCore.CurrentClientType == ClientType.Server)
+			{
+				if(Channel == MsgChannel.Safe)
+				{
+					NetworkingCore.SendServerTcpMessage(msg);
+				}
+				else if(Channel == MsgChannel.Unsafe)
+				{
+					NetworkingCore.SendServerUdpMessage(msg);
+				}
+			}
 
-                case ClientType.Unknown:
-                default:
-                    throw new Exception("We are nither a server or a client");
-            }
         }
 
-        public short CompleteMsgID
+        static byte[] createFullMsg(MessageID msgID, byte[] package)
         {
-            get
-            {
-                return BitConverter.ToInt16(new byte[] { 0, MsgID }, 0);
-            }
-        }
+            if(package.Length != MAX_UNSAFE_PACKAGE_SIZE)
+                throw new ArgumentException("The passed array must be " + MAX_UNSAFE_PACKAGE_SIZE + " long.", nameof(package));
 
-        static byte[] createFullMsg(short msgID, byte[] package)
-        {
-            if(package.Length != MAX_PACKAGE_SIZE)
-                throw new ArgumentException("The passed array must be " + MAX_PACKAGE_SIZE + " long.", nameof(package));
-
-            byte[] fullMsg = new byte[NetworkingCore.UdpPackageSize];
+            byte[] fullMsg = new byte[package.Length + sizeof(ushort)];
             
             if (!BitConverter.IsLittleEndian)
                 throw new NotImplementedException("non little endian systems not supported for now"); // TODO: Support non little endian systems
 
-            byte[] prefix = BitConverter.GetBytes(msgID);
-            for(int i = 0; i < sizeof(short); i++)
+            byte[] prefix = BitConverter.GetBytes(msgID.RawValue);
+            for(int i = 0; i < sizeof(ushort); i++)
             {
                 fullMsg[i] = prefix[i];
             }
-            for(int i = 2; i < NetworkingCore.UdpPackageSize; i++)
+            for(int i = 0; i < package.Length; i++)
             {
-                fullMsg[i] = package[i-2];
+                fullMsg[i] = package[i+sizeof(ushort)];
             }
             return fullMsg;
         }
 
     }
+	public enum MsgChannel
+	{
+		/// <summary>
+		/// Uses the tcp protocol that makes sure all messages get to the other end.
+		/// </summary>
+		Safe,
+		/// <summary>
+		/// Uses the udp protocol that is faster than tcp but does NOT make sure the messages get to the other end.
+		/// </summary>
+		Unsafe
+	}
+
 }

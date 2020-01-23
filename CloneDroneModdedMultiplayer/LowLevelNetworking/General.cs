@@ -24,7 +24,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
                 _scheduledForMainThread.Add(action);
             }
         }
-        public static void CallAllActionsScheduled()
+        internal static void CallAllActionsScheduled()
         {
             lock(_scheduledForMainThread)
             {
@@ -50,4 +50,10 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         Server,
         Client
     }
+	public class QueuedNetworkMessage
+	{
+		public byte[] DataToSend;
+		public EndPoint endPoint = null;
+	}
+
 }

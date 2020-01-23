@@ -31,20 +31,6 @@ namespace CloneDroneModdedMultiplayer
 
             NetworkManager.Init();
 
-            NetworkingCore.OnProcessMessageFromClientMainThread.Add(delegate(byte[] msg)
-            {
-                for(int i = 0; i < msg.Length; i++)
-                {
-                    debug.Log(msg[i]);
-                }
-            });
-            NetworkingCore.OnProcessMessageFromServerMainThread.Add(delegate (byte[] msg)
-            {
-                for(int i = 0; i < msg.Length; i++)
-                {
-                    debug.Log(msg[i]);
-                }
-            });
 
         }
         public override void OnModEnabled()
@@ -102,13 +88,9 @@ namespace CloneDroneModdedMultiplayer
             {
                 debug.Log("starting server...");
 
-                NetworkingCore.StartServer(606, delegate(Socket socket)
-                {
-                    NetworkingCore.ScheduleForMainThread(delegate
-                    {
-                        debug.Log("client Connected!");
-                    });
-                });
+				NetworkingCore.SERVER_CallbackOnClientConnected += (ConnectedClient client) => ThreadSafeDebug.Log("client connected!");
+
+                NetworkingCore.StartServer(606);
             }
 
         }

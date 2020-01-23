@@ -24,21 +24,20 @@ namespace CloneDroneModdedMultiplayer.Internal
             spawnPoint.transform.position = spawnPointPosition;
 
             FirstPersonMover spawnedPlayer = GameFlowManager.Instance.SpawnPlayer(spawnPoint.transform, true, assignMainPlayer);
-            Players.Add(new MultiplayerPlayer(spawnedPlayer, GetNextNetworkID()));
+            Players.Add(new MultiplayerPlayer(spawnedPlayer.GetComponent<PlayerInputController>(), GetNextNetworkID()));
 
             GameObject.Destroy(spawnPoint);
         }
 
-        public static void StartServer(int port = 606)
+        public static void StartServer(int port = 8606)
         {
-            Setup();
+            GenericSetup();
 
             SingleplayerServerStarter.Instance.StartServerThenCall(delegate // clone drone requires us to start a bolt server to spawn players and such
             {
-                NetworkingCore.StartServer(port, OnClientConnected);
+                NetworkingCore.StartServer(port);
 
                 CurrentGameData.CurentLevelID = "ModdedMultiplayerTestLevel.json";
-
 
                 LevelManager.Instance.SpawnCurrentLevel(false).MoveNext();
 
@@ -50,29 +49,18 @@ namespace CloneDroneModdedMultiplayer.Internal
         
         public const string TEMP_MAP_NAME = "tempLevel.json";
 
-        public static void StartClient(string ip, int port = 606)
+        public static void StartClient(string ip, int port = 8606)
         {
-            Setup();
+            GenericSetup();
 
             SingleplayerServerStarter.Instance.StartServerThenCall(delegate // clone drone requires us to start a bolt server to spawn players and such
             {
 
                 NetworkingCore.StartClient(ip, port, delegate
                 {
-                    NetworkingCore.ScheduleForMainThread(delegate
-                    {
-                        debug.Log("connected!");
-                    });
+					ThreadSafeDebug.Log("Connected!");
 
-                    ReciveMap(NetworkingCore.CLIENT_ServerConnection);
 
-                    NetworkingCore.ScheduleForMainThread(delegate { 
-                        CurrentGameData.CurentLevelID = TEMP_MAP_NAME;
-
-                        LevelManager.Instance.SpawnCurrentLevel(false).MoveNext();
-
-                        SpawnPlayer(new Vector3(0, 10, 0), true);
-                    });
 
                 });
                 
@@ -83,20 +71,8 @@ namespace CloneDroneModdedMultiplayer.Internal
 
             });
         }
-        
-        public static void OnClientConnected(Socket socket)
-        {
-            NetworkingCore.ScheduleForMainThread(delegate
-            {
-                debug.Log("client connected!");
-            });
 
-            string jsonPath = LevelManager.Instance.GetCurrentLevelDescription().LevelJSONPath;
-
-            SendMap(socket, jsonPath);
-        }
-
-        public static void Setup()
+        public static void GenericSetup()
         {
             CurrentGameData = new GameData()
             {
@@ -117,46 +93,17 @@ namespace CloneDroneModdedMultiplayer.Internal
             return 0;
         }
 
-        public static string ReciveMap(Socket socket)
-        {
-            byte[] lengthBytes = new byte[sizeof(int)];
-            socket.Receive(lengthBytes);
-            socket.Send(lengthBytes);
-            int length = BitConverter.ToInt32(lengthBytes, 0);
-            byte[] buffer = new byte[length];
-            socket.Receive(buffer);
-
-            string path = Application.persistentDataPath + "/ModdedLevels/"+TEMP_MAP_NAME;
-            File.WriteAllBytes(path, buffer);
-            return path;
-        }
-        public static void SendMap(Socket socket, string jsonPath)
-        {
-            byte[] fileBytes = File.ReadAllBytes(jsonPath);
-
-            byte[] lengthAsBytes = BitConverter.GetBytes(fileBytes.Length);
-
-            socket.Send(lengthAsBytes);
-            byte[] buffer = new byte[sizeof(int)];
-            socket.Receive(buffer);
-            if(buffer != lengthAsBytes)
-                throw new Exception("Something went wrong");
-
-            socket.Send(fileBytes);
-
-
-        }
     }
 
     public class MultiplayerPlayer
     {
 
-        public FirstPersonMover PhysicalPlayer;
+        public PlayerInputController PlayerInput;
         public short NetworkID;
 
-        public MultiplayerPlayer(FirstPersonMover physicalPlayer, short networkID)
+        public MultiplayerPlayer(PlayerInputController inputController, short networkID)
         {
-            PhysicalPlayer=physicalPlayer;
+			PlayerInput=inputController;
             NetworkID=networkID;
         }
 
