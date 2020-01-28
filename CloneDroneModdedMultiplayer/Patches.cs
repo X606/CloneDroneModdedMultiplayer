@@ -12,7 +12,7 @@ namespace CloneDroneModdedMultiplayer.Patches
         public static void Prefix(ref Tuple<GameMode, bool> __state)
         {
             GameMode currentGameMode = Accessor.GetPrivateField<GameFlowManager, GameMode>("_gameMode", GameFlowManager.Instance);
-            bool cond = currentGameMode == Main.MODDED_MULTIPLAYER_TEXT_GAMEMODE;
+            bool cond = currentGameMode == Main.MODDED_MULTIPLAYER_TEST_GAMEMODE;
             if(cond)
             {
                 __state = new Tuple<GameMode, bool>(currentGameMode, cond);
@@ -42,7 +42,7 @@ namespace CloneDroneModdedMultiplayer.Patches
         {
             get
             {
-                string[] paths = PathUtils.GetModdedLevels(PathUtils.RootPath.Root);
+                string[] paths = PathUtils.GetModdedLevels();
                 List<LevelDescription> levels = new List<LevelDescription>();
                 for(int i = 0; i < paths.Length; i++)
                 {
@@ -67,7 +67,7 @@ namespace CloneDroneModdedMultiplayer.Patches
     {
         public static GameData Postpatch(GameData __result)
         {
-            if (GameModeManager.Is(Main.MODDED_MULTIPLAYER_TEXT_GAMEMODE))
+            if (GameModeManager.Is(Main.MODDED_MULTIPLAYER_TEST_GAMEMODE))
             {
                 return Internal.ServerRunner.CurrentGameData;
             }
@@ -81,7 +81,7 @@ namespace CloneDroneModdedMultiplayer.Patches
     {
         public static bool PostPatch(bool __result)
         {
-            if(GameModeManager.Is(Main.MODDED_MULTIPLAYER_TEXT_GAMEMODE))
+            if(GameModeManager.Is(Main.MODDED_MULTIPLAYER_TEST_GAMEMODE))
                 return true;
             
             return __result;

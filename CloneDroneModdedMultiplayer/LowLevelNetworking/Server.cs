@@ -17,7 +17,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 		public static event Action<ConnectedClient, byte[]> OnServerTcpMessage;
 		public static event Action<ConnectedClient, byte[]> OnServerUdpMessage;
 
-		public static event Action<ConnectedClient> SERVER_CallbackOnClientConnected;
+		public static event Action<ConnectedClient> SERVER_OnClientConnected;
 
 		static Queue<QueuedNetworkMessage> _SERVER_queuedTcpNetworkMessages = new Queue<QueuedNetworkMessage>();
 		static Queue<QueuedNetworkMessage> _SERVER_queuedUdpNetworkMessages = new Queue<QueuedNetworkMessage>();
@@ -49,7 +49,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 				{
 					SERVER_ConnectedClients.Add(client);
 				}
-				SERVER_CallbackOnClientConnected(client);
+				SERVER_OnClientConnected(client);
 
 			}
 			
@@ -114,6 +114,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
 		public static void SendServerTcpMessage(byte[] bytes)
 		{
+			ThreadSafeDebug.Log("Sending tcp msg step1");
 			lock(_SERVER_queuedTcpNetworkMessages)
 			{
 				_SERVER_queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
@@ -124,6 +125,8 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 		}
 		public static void SendServerUdpMessage(byte[] bytes)
 		{
+			ThreadSafeDebug.Log("Sending tcp msg step2");
+
 			if(bytes.Length != UdpPackageSize)
 				throw new Exception("All Udp messages must be " + UdpPackageSize + " bytes long.");
 			lock(_SERVER_queuedUdpNetworkMessages)

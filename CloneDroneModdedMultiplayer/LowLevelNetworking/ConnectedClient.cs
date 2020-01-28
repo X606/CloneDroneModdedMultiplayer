@@ -24,23 +24,39 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
 		public byte[] TcpRecive()
 		{
+			ThreadSafeDebug.Log("data before:" + TcpConnection.Available);
+
 			byte[] buffer = new byte[sizeof(int)];
 			TcpConnection.Receive(buffer, 0, buffer.Length, SocketFlags.None);
+
+			for(int i = 0; i < buffer.Length; i++)
+			{
+				ThreadSafeDebug.Log(i + ": " + buffer[i]);
+			}
 			int length = BitConverter.ToInt32(buffer, 0);
 			buffer = new byte[length];
+
+			while(TcpConnection.Available < length) // wait for the full msg to come
+				System.Threading.Thread.Sleep(1);
+
 			TcpConnection.Receive(buffer, 0, length, SocketFlags.None);
 
-			TcpConnection.Receive(buffer);
+			ThreadSafeDebug.Log("data left:" + TcpConnection.Available);
+
+			System.IO.File.WriteAllBytes(UnityEngine.Application.persistentDataPath + "/testoutput.txt", buffer);
 
 			return buffer;
 		}
 		public void TcpSend(byte[] data)
 		{
-			byte[] buffer = new byte[data.Length + sizeof(int)];
 			byte[] dataLengthBytes = BitConverter.GetBytes(data.Length);
-			Buffer.BlockCopy(dataLengthBytes, 0, buffer, 0, sizeof(int));
-			Buffer.BlockCopy(data, 0, buffer, sizeof(int), data.Length);
-			TcpConnection.Send(data);
+
+			for(int i = 0; i < dataLengthBytes.Length; i++)
+			{
+				ThreadSafeDebug.Log(i + ": " + dataLengthBytes[i]);
+			}
+			TcpConnection.Send(dataLengthBytes, 0, sizeof(int), SocketFlags.None);
+			TcpConnection.Send(data, 0, data.Length, SocketFlags.None);
 		}
 
 		public byte[] UdpRecive()

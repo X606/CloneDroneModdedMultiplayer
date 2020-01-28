@@ -4,14 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CloneDroneModdedMultiplayer.LowLevelNetworking;
+using ModLibrary;
 
 namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 {
     public abstract class NetworkMessageBase
     {
+		internal Mod Owner;
+
         public const int MAX_UNSAFE_PACKAGE_SIZE = NetworkingCore.UdpPackageSize-2;
 
-        public abstract MessageID MsgID { get; }
+        protected abstract ushort MsgID { get; }
         public abstract string Name { get; }
 		public abstract MsgChannel Channel { get; }
 
@@ -21,6 +24,30 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
         protected virtual void OnPackageReceivedClient(byte[] package)
         {
         }
+
+		public MessageID FullMessageID
+		{
+			get
+			{
+				MessageID messageID = new MessageID();
+
+				if(Owner is Main) // if the owner is the the modded multiplayer mod, set the ModID to 0
+				{
+					messageID.ModID = 0;
+				}
+				else
+				{
+					if(!NetworkManager.ModUUIDToNetworkID.TryGetValue(Owner.GetUniqueID(), out ushort value))
+						throw new Exception("Invalid mod tried to register network message");
+
+					messageID.ModID = value;
+				}
+				
+				messageID.MsgID = MsgID;
+
+				return messageID;
+			}
+		}
 
         public void OnReceived(byte[] package, bool isServer)
         {
@@ -36,10 +63,13 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 		}
         public void Send(byte[] data)
         {
+			debug.Log("sending... length: " + data.Length);
+
             if(Channel == MsgChannel.Unsafe && data.Length != MAX_UNSAFE_PACKAGE_SIZE)
                 throw new ArgumentException("The passed array must be " + MAX_UNSAFE_PACKAGE_SIZE + " long if the channel is set to unsafe", nameof(data));
 
-			byte[] msg = createFullMsg(MsgID, data);
+			byte[] msg = createFullMsg(FullMessageID, data);
+			debug.Log("full msg length: " + msg.Length);
 
 			if (NetworkingCore.CurrentClientType == ClientType.Client)
 			{
@@ -66,9 +96,9 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 
         }
 
-        static byte[] createFullMsg(MessageID msgID, byte[] package)
+        byte[] createFullMsg(MessageID msgID, byte[] package)
         {
-            if(package.Length != MAX_UNSAFE_PACKAGE_SIZE)
+            if(package.Length != MAX_UNSAFE_PACKAGE_SIZE && Channel == MsgChannel.Unsafe)
                 throw new ArgumentException("The passed array must be " + MAX_UNSAFE_PACKAGE_SIZE + " long.", nameof(package));
 
             byte[] fullMsg = new byte[package.Length + sizeof(ushort)];
@@ -83,7 +113,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
             }
             for(int i = 0; i < package.Length; i++)
             {
-                fullMsg[i] = package[i+sizeof(ushort)];
+                fullMsg[i+sizeof(ushort)] = package[i];
             }
             return fullMsg;
         }

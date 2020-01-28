@@ -15,6 +15,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         public const int TARGET_TPS = 60;
 
         public static ClientType CurrentClientType { get; private set; } = ClientType.Unknown;
+		public static bool IsConnected => CurrentClientType != ClientType.Unknown;
 
         static List<Action> _scheduledForMainThread = new List<Action>();
 

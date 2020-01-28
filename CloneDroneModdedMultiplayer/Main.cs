@@ -15,11 +15,19 @@ using CloneDroneModdedMultiplayer.Internal;
 
 namespace CloneDroneModdedMultiplayer
 {
+
+	[NetworkedMod]
     public class Main : Mod
     {
+		public Main()
+		{
+			Instance = this;
+		}
+		public static Main Instance { get; private set; }
+
         static bool _hasInjected = false;
 
-        public const GameMode MODDED_MULTIPLAYER_TEXT_GAMEMODE = (GameMode)2526;
+        public const GameMode MODDED_MULTIPLAYER_TEST_GAMEMODE = (GameMode)2526;
 
         public override string GetModName() => "Clone drone modded multiplayer";
         public override string GetUniqueID() => "33f5eff2-e81f-444e-89d4-924b5c472616";
@@ -35,6 +43,7 @@ namespace CloneDroneModdedMultiplayer
         }
         public override void OnModEnabled()
         {
+
             if(!_hasInjected)
             {
                 Injector.InjectPrefix<LevelManager, GetLevelDescriptionsPatches>("getLevelDescriptions", "Prefix", this);
@@ -70,27 +79,16 @@ namespace CloneDroneModdedMultiplayer
             {
                 debug.Log("starting client...");
 
-                ServerRunner.StartClient(subCommand[1], 606);
-
-                /*NetworkingCore.StartClient(subCommand[1], 606, delegate
-                {
-                    NetworkingCore.ScheduleForMainThread(delegate
-                    {
-                        debug.Log("connected!");
-                    });
-                });*/
-
-                
-                
-                //ServerRunner.StartClient(subCommand[1]);
+                ServerRunner.StartClient(subCommand[1]);
             }
+
             if (subCommand[0].ToLower() == "startserver")
             {
                 debug.Log("starting server...");
 
-				NetworkingCore.SERVER_CallbackOnClientConnected += (ConnectedClient client) => ThreadSafeDebug.Log("client connected!");
+				NetworkingCore.SERVER_OnClientConnected += (ConnectedClient client) => ThreadSafeDebug.Log("client connected!");
 
-                NetworkingCore.StartServer(606);
+                NetworkingCore.StartServer(8606);
             }
 
         }

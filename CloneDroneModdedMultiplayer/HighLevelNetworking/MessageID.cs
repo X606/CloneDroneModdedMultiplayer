@@ -19,13 +19,15 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 
 		private ushort _value;
 
+		const int BITS_IN_USHORT = sizeof(ushort)*8;
+
 		// MSG_ID_BIT_LENGTH is the amount of bits we want to use of our 16 bits for the msg id, 
 		// keep in mind that the rest of the bits are used for the mod id so make sure to leave some free.
-		private const ushort MSG_ID_BIT_LENGTH = 10;
-		private const ushort MOD_ID_BIT_LENGTH = 16 - MSG_ID_BIT_LENGTH;
+		const ushort MSG_ID_BIT_LENGTH = 10;
+		const ushort MOD_ID_BIT_LENGTH = BITS_IN_USHORT - MSG_ID_BIT_LENGTH;
 
-		private const ushort MSG_ID_MASK = (1<<MSG_ID_BIT_LENGTH)-1;               // this makes a value that is 0000001111111111 in binary
-		private const ushort MOD_ID_MASK = ((1<<16)-1)^((1<<MSG_ID_BIT_LENGTH)-1); // this makes a value that is 1111110000000000 in binary
+		const ushort MSG_ID_MASK = (1<<MSG_ID_BIT_LENGTH)-1;                           // this makes a value that is 0000001111111111 in binary
+		const ushort MOD_ID_MASK = ((1<<BITS_IN_USHORT)-1)^((1<<MSG_ID_BIT_LENGTH)-1); // this makes a value that is 1111110000000000 in binary
 
 		public ushort ModID
 		{

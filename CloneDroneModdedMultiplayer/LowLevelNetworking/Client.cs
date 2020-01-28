@@ -21,7 +21,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 		static Queue<QueuedNetworkMessage> _CLIENT_queuedTcpNetworkMessages = new Queue<QueuedNetworkMessage>();
         static Queue<QueuedNetworkMessage> _CLIENT_queuedUdpNetworkMessages = new Queue<QueuedNetworkMessage>();
 
-        public static bool StartClient(string ip, int port, Action callbackOnConnect = null)
+        public static bool StartClient(string ip, int port)
         {
             CurrentClientType = ClientType.Client;
 
@@ -31,7 +31,6 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             Socket tcpSocket = TcpConnect((IPEndPoint)serverEndpoint);
             Socket UdpSocket = UdpConnect((IPEndPoint)serverEndpoint);
 			CLIENT_ServerConnection = new ConnectedClient(tcpSocket, UdpSocket, serverEndpoint);
-			callbackOnConnect();
 
             new Thread(CLIENT_Mainloop).Start();
 
