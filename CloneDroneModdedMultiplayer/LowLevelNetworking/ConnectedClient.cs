@@ -24,38 +24,50 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
 		public byte[] TcpRecive()
 		{
-			ThreadSafeDebug.Log("data before:" + TcpConnection.Available);
-
 			byte[] buffer = new byte[sizeof(int)];
 			TcpConnection.Receive(buffer, 0, buffer.Length, SocketFlags.None);
 
-			for(int i = 0; i < buffer.Length; i++)
-			{
-				ThreadSafeDebug.Log(i + ": " + buffer[i]);
-			}
 			int length = BitConverter.ToInt32(buffer, 0);
-			buffer = new byte[length];
+			buffer = new byte[2048];
+			byte[] outputData = new byte[length];
 
-			while(TcpConnection.Available < length) // wait for the full msg to come
-				System.Threading.Thread.Sleep(1);
+			int fileOffset = 0;
+			int bytesLeftToReceive = length;
+			while(bytesLeftToReceive > 0) // recives the map in chunks so large msgs should be supported
+			{
+				int bytesRead = TcpConnection.Receive(buffer);
 
-			TcpConnection.Receive(buffer, 0, length, SocketFlags.None);
+				int bytesToCopy = Math.Min(bytesRead, bytesLeftToReceive);
 
-			ThreadSafeDebug.Log("data left:" + TcpConnection.Available);
+				Buffer.BlockCopy(buffer, 0, outputData, fileOffset, bytesToCopy);
 
-			System.IO.File.WriteAllBytes(UnityEngine.Application.persistentDataPath + "/testoutput.txt", buffer);
+				fileOffset += bytesRead;
+				bytesLeftToReceive -= bytesRead;
+			}
 
-			return buffer;
+			return outputData;
 		}
 		public void TcpSend(byte[] data)
 		{
 			byte[] dataLengthBytes = BitConverter.GetBytes(data.Length);
-
-			for(int i = 0; i < dataLengthBytes.Length; i++)
-			{
-				ThreadSafeDebug.Log(i + ": " + dataLengthBytes[i]);
-			}
+			
 			TcpConnection.Send(dataLengthBytes, 0, sizeof(int), SocketFlags.None);
+
+			byte[] buffer = new byte[2048];
+
+			int fileOffset = 0;
+			int bytesLeft = data.Length;
+
+			while(bytesLeft > 0) // send map in chunks so large msgs should be supported
+			{
+				int bytesToSend = Math.Min(bytesLeft, 2048);
+
+				TcpConnection.Send(data, fileOffset, bytesToSend, SocketFlags.None);
+
+				fileOffset += bytesToSend;
+				bytesLeft -= bytesToSend;
+			}
+
 			TcpConnection.Send(data, 0, data.Length, SocketFlags.None);
 		}
 
