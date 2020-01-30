@@ -18,20 +18,27 @@ namespace CloneDroneModdedMultiplayer.Internal
     {
         public static GameData CurrentGameData;
 
-        public static List<MultiplayerPlayer> Players = new List<MultiplayerPlayer>();
-
-        public static void SpawnPlayer(Vector3 spawnPointPosition, bool assignMainPlayer)
-        {
-            GameObject spawnPoint = new GameObject();
-            spawnPoint.transform.position = spawnPointPosition;
-
-            FirstPersonMover spawnedPlayer = GameFlowManager.Instance.SpawnPlayer(spawnPoint.transform, true, assignMainPlayer);
-            Players.Add(new MultiplayerPlayer(spawnedPlayer.GetComponent<PlayerInputController>(), GetNextNetworkID()));
-
-            GameObject.Destroy(spawnPoint);
-        }
+		public static Dictionary<ushort, MultiplayerPlayer> Players = new Dictionary<ushort, MultiplayerPlayer>();
 
 		public const string TEMP_MAP_NAME = "tempLevel.json";
+
+		public static void SpawnPhysicalPlayer(ushort playerID, Vector3 position, float rotation)
+		{
+			MultiplayerPlayer player = Players[playerID];
+
+			GameObject spawnPoint = new GameObject("TempSpawnPoint" + playerID);
+			spawnPoint.transform.position = position;
+			spawnPoint.transform.eulerAngles = new Vector3(0, rotation, 0);
+
+			CharacterModel overrideModel = null;
+			Character selectedCharacter = EnemyFactory.Instance.GetEnemyPrefab(player.CharacterModelOverrideType);
+			if (selectedCharacter is FirstPersonMover)
+				overrideModel = (selectedCharacter as FirstPersonMover).CharacterModelPrefab;
+
+			GameFlowManager.Instance.SpawnPlayer(spawnPoint.transform, true, player.IsLocalPlayer, player.PlayerColor, overrideModel);
+
+			GameObject.Destroy(spawnPoint);
+		}
 
 		public static void StartServer(int port = 8606)
         {
@@ -44,9 +51,7 @@ namespace CloneDroneModdedMultiplayer.Internal
                 NetworkingCore.StartServer(port);
 
 				RegisterHandelers();
-
-
-
+				
                 CurrentGameData.CurentLevelID = "ModdedMultiplayerTestLevel.json";
 
                 LevelManager.Instance.SpawnCurrentLevel(false).MoveNext();
@@ -57,13 +62,13 @@ namespace CloneDroneModdedMultiplayer.Internal
             
         }
 
-		static void SERVER_OnClientConnected(ConnectedClient obj)
+		static void SERVER_OnClientConnected(ConnectedClient obj) // this will NOT run in the main thread
 		{
 			ThreadSafeDebug.Log("Client connected from " + obj.TcpConnection.RemoteEndPoint.ToString());
 
 			string levelPath = LevelManager.Instance.GetCurrentLevelDescription().LevelJSONPath;
 			byte[] bytes = File.ReadAllBytes(levelPath);
-			MapSendingMessge.Send(bytes);
+			MapSendingMessge.Send(bytes); // send map to other client
 
 
 		}
@@ -105,15 +110,19 @@ namespace CloneDroneModdedMultiplayer.Internal
         }
 
 		public static MapSendingMessge MapSendingMessge;
+		public static PlayerConnectedMessage PlayerSpawnMessage;
 
 		public static void RegisterHandelers()
 		{
 			Mod owner = Main.Instance;
 			MapSendingMessge = new MapSendingMessge();
 			NetworkManager.AddNetworkMessage(MapSendingMessge, owner);
+
+			PlayerSpawnMessage = new PlayerConnectedMessage();
+			NetworkManager.AddNetworkMessage(PlayerSpawnMessage, owner);
 		}
 
-        public static short GetNextNetworkID()
+        public static ushort GetNextNetworkID()
         {
             return 0;
         }
@@ -122,14 +131,17 @@ namespace CloneDroneModdedMultiplayer.Internal
 
     public class MultiplayerPlayer
     {
+        public ushort PlayerID;
+		public readonly ushort ServerOwnerClientNetworkID;
+		public bool IsLocalPlayer;
+		public EnemyType CharacterModelOverrideType;
+		public Color PlayerColor;
 
-        public PlayerInputController PlayerInput;
-        public short NetworkID;
+		public Dictionary<UpgradeType, int> PlayerUpgrades;
 
-        public MultiplayerPlayer(PlayerInputController inputController, short networkID)
+		public MultiplayerPlayer(ushort playerID)
         {
-			PlayerInput=inputController;
-            NetworkID=networkID;
+            PlayerID=playerID;
         }
 
     }

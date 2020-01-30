@@ -14,9 +14,12 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
     {
         public static List<ConnectedClient> SERVER_ConnectedClients = new List<ConnectedClient>();
 
+		/// <summary>NOTE: This will run on a seperate thread</summary>
 		public static event Action<ConnectedClient, byte[]> OnServerTcpMessage;
+		/// <summary>NOTE: This will run on a seperate thread</summary>
 		public static event Action<ConnectedClient, byte[]> OnServerUdpMessage;
 
+		/// <summary>NOTE: This will run on a seperate thread</summary>
 		public static event Action<ConnectedClient> SERVER_OnClientConnected;
 
 		static Queue<QueuedNetworkMessage> _SERVER_queuedTcpNetworkMessages = new Queue<QueuedNetworkMessage>();
@@ -24,7 +27,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
 		public static bool StartServer(int port)
         {
-            CurrentClientType = ClientType.Server;
+            CurrentClientType = ClientType.Host;
 
 			new Thread(delegate() { SERVER_AcceptConnectionsThread(port); }).Start(); // start accept thread
 			new Thread(SERVER_Mainloop).Start(); // start main server network thread
@@ -44,6 +47,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 				Socket connection = tcpListener.Accept();
 				Socket udpConnection = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 				ConnectedClient client = new ConnectedClient(connection, udpConnection, connection.RemoteEndPoint);
+				client.ClientNetworkID = getNextClientNetworkID();
 
 				lock(SERVER_ConnectedClients)
 				{
@@ -78,28 +82,34 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 								byte[] buffer = clientConnection.UdpRecive();
 								OnServerUdpMessage(clientConnection, buffer);
 							}
-
-							lock(_SERVER_queuedTcpNetworkMessages)
-							{
-								while(_SERVER_queuedTcpNetworkMessages.Count > 0)
-								{
-									var msg = _SERVER_queuedTcpNetworkMessages.Dequeue();
-									clientConnection.TcpSend(msg.DataToSend);
-								}
-							}
-							lock(_SERVER_queuedUdpNetworkMessages)
-							{
-								while(_SERVER_queuedUdpNetworkMessages.Count > 0)
-								{
-									var msg = _SERVER_queuedUdpNetworkMessages.Dequeue();
-									clientConnection.UdpSend(msg.DataToSend);
-								}
-							}
-
+							
 						}
-						
-
 					}
+					lock(_SERVER_queuedTcpNetworkMessages)
+					{
+						while(_SERVER_queuedTcpNetworkMessages.Count > 0)
+						{
+							var msg = _SERVER_queuedTcpNetworkMessages.Dequeue();
+							foreach(ConnectedClient clientConnection in SERVER_ConnectedClients)
+							{
+								if(msg.TargetConnection == null || msg.TargetConnection.Value == clientConnection.ClientNetworkID)
+									clientConnection.TcpSend(msg.DataToSend);
+							}
+						}
+					}
+					lock(_SERVER_queuedUdpNetworkMessages)
+					{
+						while(_SERVER_queuedUdpNetworkMessages.Count > 0)
+						{
+							var msg = _SERVER_queuedUdpNetworkMessages.Dequeue();
+							foreach(ConnectedClient clientConnection in SERVER_ConnectedClients)
+							{
+								if(msg.TargetConnection == null || msg.TargetConnection.Value == clientConnection.ClientNetworkID)
+									clientConnection.UdpSend(msg.DataToSend);
+							}
+						}
+					}
+
 				}
 
 				stopwatch.Stop();
@@ -114,7 +124,6 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 
 		public static void SendServerTcpMessage(byte[] bytes)
 		{
-			ThreadSafeDebug.Log("Sending tcp msg step1");
 			lock(_SERVER_queuedTcpNetworkMessages)
 			{
 				_SERVER_queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
@@ -125,8 +134,6 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 		}
 		public static void SendServerUdpMessage(byte[] bytes)
 		{
-			ThreadSafeDebug.Log("Sending tcp msg step2");
-
 			if(bytes.Length != UdpPackageSize)
 				throw new Exception("All Udp messages must be " + UdpPackageSize + " bytes long.");
 			lock(_SERVER_queuedUdpNetworkMessages)
@@ -137,6 +144,14 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 				});
 			}
 
+		}
+
+		static ushort _currentClientNetworkID = 1;
+		static ushort getNextClientNetworkID()
+		{
+			ushort selectedId = _currentClientNetworkID;
+			_currentClientNetworkID++;
+			return selectedId;
 		}
 
 	}

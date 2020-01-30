@@ -12,7 +12,9 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
     public static class NetworkManager
     {
         static Dictionary<MessageID, NetworkMessageBase> _networkMessagesDictionary = new Dictionary<MessageID, NetworkMessageBase>();
-		internal static Dictionary<string, ushort> ModUUIDToNetworkID = new Dictionary<string, ushort>();
+		internal static Dictionary<string, ushort> ModUUIDToModNetworkID = new Dictionary<string, ushort>();
+
+		public static ClientType CurrentClientType => NetworkingCore.CurrentClientType;
 
         public static void AddNetworkMessage(NetworkMessageBase networkMessage, Mod mod)
         {
@@ -39,7 +41,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 			NetworkingCore.OnClientUdpMessage += (byte[] data) => OnMessage(data, false);
 		}
 
-		static void SERVER_OnClientConnected(ConnectedClient obj)
+		static void SERVER_OnClientConnected(ConnectedClient obj) // This will run in a differentThread
 		{
 		}
 

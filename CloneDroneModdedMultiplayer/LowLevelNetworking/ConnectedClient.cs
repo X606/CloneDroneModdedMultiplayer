@@ -10,6 +10,8 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
 	public class ConnectedClient
 	{
+		public readonly ushort ClientNetworkID;
+
 		public Socket TcpConnection;
 		public Socket UdpConnection;
 
@@ -45,6 +47,8 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 				bytesLeftToReceive -= bytesRead;
 			}
 
+			TcpConnection.Send(new byte[] { 1 }); // make sure other client has to wait for us to be done
+
 			return outputData;
 		}
 		public void TcpSend(byte[] data)
@@ -68,7 +72,10 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 				bytesLeft -= bytesToSend;
 			}
 
-			TcpConnection.Send(data, 0, data.Length, SocketFlags.None);
+			TcpConnection.Send(data, 0, data.Length, SocketFlags.None); // wait for other client to recive all data
+
+			buffer = new byte[1];
+			TcpConnection.Receive(buffer);
 		}
 
 		public byte[] UdpRecive()

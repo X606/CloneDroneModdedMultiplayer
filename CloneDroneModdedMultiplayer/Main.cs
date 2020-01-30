@@ -82,15 +82,6 @@ namespace CloneDroneModdedMultiplayer
                 ServerRunner.StartClient(subCommand[1]);
             }
 
-            if (subCommand[0].ToLower() == "startserver")
-            {
-                debug.Log("starting server...");
-
-				NetworkingCore.SERVER_OnClientConnected += (ConnectedClient client) => ThreadSafeDebug.Log("client connected!");
-
-                NetworkingCore.StartServer(8606);
-            }
-
         }
         public override void OnLanugageChanged(string newLanguageID, Dictionary<string, string> localizationDictionary)
         {
@@ -99,4 +90,11 @@ namespace CloneDroneModdedMultiplayer
             localizationDictionary.Add("test name", "test name");
         }
     }
+
+	public enum ClientType
+	{
+		Unknown,
+		Host,
+		Client
+	}
 }

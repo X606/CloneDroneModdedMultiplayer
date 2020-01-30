@@ -43,18 +43,12 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
             }
         }
 
-    } 
-
-    public enum ClientType
-    {
-        Unknown,
-        Server,
-        Client
     }
+
 	public class QueuedNetworkMessage
 	{
 		public byte[] DataToSend;
-		public EndPoint endPoint = null;
+		public int? TargetConnection = null;
 	}
 
 }
