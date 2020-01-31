@@ -108,8 +108,6 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 				bytesLeft -= bytesToSend;
 			}
 
-			TcpConnection.Send(data, 0, data.Length, SocketFlags.None); // wait for other client to recive all data
-
 			ThreadSafeDebug.Log("done sending tcp data... length: " + data.Length);
 
 			//buffer = new byte[1];

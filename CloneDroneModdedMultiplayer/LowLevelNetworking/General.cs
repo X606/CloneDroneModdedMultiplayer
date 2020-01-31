@@ -29,7 +29,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         {
             lock(_scheduledForMainThread)
             {
-				for(int i = 0; i < _scheduledForMainThread.Count; i++)
+				for(int i = 0; i < _scheduledForMainThread.Count; i++) // this needs to be a for loop and not a foreach since you cant modify values in a foreach loop
                 {
 					Action item = _scheduledForMainThread[i];
 					try
