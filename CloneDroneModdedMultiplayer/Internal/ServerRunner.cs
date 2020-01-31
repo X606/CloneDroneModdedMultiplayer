@@ -19,6 +19,7 @@ namespace CloneDroneModdedMultiplayer.Internal
         public static GameData CurrentGameData;
 
 		public static Dictionary<ushort, MultiplayerPlayer> Players = new Dictionary<ushort, MultiplayerPlayer>();
+		public static ushort? LocalPlayerID = null;
 
 		public const string TEMP_MAP_NAME = "tempLevel.json";
 
@@ -35,7 +36,7 @@ namespace CloneDroneModdedMultiplayer.Internal
 			if (selectedCharacter is FirstPersonMover)
 				overrideModel = (selectedCharacter as FirstPersonMover).CharacterModelPrefab;
 
-			GameFlowManager.Instance.SpawnPlayer(spawnPoint.transform, true, player.IsLocalPlayer, player.PlayerColor, overrideModel);
+			GameFlowManager.Instance.SpawnPlayer(spawnPoint.transform, true, LocalPlayerID.HasValue && playerID == LocalPlayerID.Value, player.PlayerColor, overrideModel);
 
 			GameObject.Destroy(spawnPoint);
 		}
@@ -55,21 +56,60 @@ namespace CloneDroneModdedMultiplayer.Internal
                 CurrentGameData.CurentLevelID = "ModdedMultiplayerTestLevel.json";
 
                 LevelManager.Instance.SpawnCurrentLevel(false).MoveNext();
-
-                SpawnPlayer(new Vector3(0, 10, 0), true);
                 
             });
             
         }
 
-		static void SERVER_OnClientConnected(ConnectedClient obj) // this will NOT run in the main thread
+		static void SERVER_OnClientConnected(ConnectedClient client) // this will NOT run in the main thread
 		{
-			ThreadSafeDebug.Log("Client connected from " + obj.TcpConnection.RemoteEndPoint.ToString());
-
+			ThreadSafeDebug.Log("Client connected from " + client.TcpConnection.RemoteEndPoint.ToString());
+			/*
 			string levelPath = LevelManager.Instance.GetCurrentLevelDescription().LevelJSONPath;
 			byte[] bytes = File.ReadAllBytes(levelPath);
-			MapSendingMessge.Send(bytes); // send map to other client
+			MapSendingMessge.SendTo(bytes, client.ClientNetworkID); // send map to other client
 
+			ThreadSafeDebug.Log("bruh1");
+
+			ushort playerID = GetNextPlayerID();
+
+			SetLocalPlayerMessage.SendTo(playerID, client.ClientNetworkID);
+
+			var createdPlayerInfo = new PlayerConnectedMessage.CreatedPlayerInfo()
+			{
+				CharacterModelOverrideType = EnemyType.None,
+				PlayerColor = HumanFactsManager.Instance.FavouriteColors[HumanFactsManager.Instance.GetRandomColorIndex()].ColorValue,
+				PlayerID = playerID,
+				PlayerUpgrades = new Dictionary<UpgradeType, int>()
+			};
+			PlayerConnectMessage.Send(createdPlayerInfo);
+
+			ThreadSafeDebug.Log("bruh2");
+
+			var spawnPlayerMessage = new SpawnPlayerMessage.SpawnedPlayerInfo()
+			{
+				PlayerID = playerID,
+				Position = new Vector3(0f, 10f, 0f),
+				Rotation = 0f
+			};
+			SpawnPlayerMessage.Send(spawnPlayerMessage);
+
+			ThreadSafeDebug.Log("bruh3");
+			*/
+
+			byte[] buffer = new byte[10];
+			for(int i = 0; i < buffer.Length; i++)
+			{
+				buffer[i] = (byte)i;
+			}
+
+			DebugMessage.Send(buffer);
+
+			DebugMessage.Send(buffer);
+
+			DebugMessage.Send(buffer);
+
+			DebugMessage.Send(buffer);
 
 		}
 
@@ -86,7 +126,7 @@ namespace CloneDroneModdedMultiplayer.Internal
 
 				MapSendingMessge.OnMapSpawnedClient += delegate
 				{
-					SpawnPlayer(new Vector3(0, 10, 0), true);
+					
 				};
 
 			});
@@ -110,7 +150,10 @@ namespace CloneDroneModdedMultiplayer.Internal
         }
 
 		public static MapSendingMessge MapSendingMessge;
-		public static PlayerConnectedMessage PlayerSpawnMessage;
+		public static PlayerConnectedMessage PlayerConnectMessage;
+		public static SpawnPlayerMessage SpawnPlayerMessage;
+		public static SetLocalPlayerMessage SetLocalPlayerMessage;
+		public static DebugMessage DebugMessage;
 
 		public static void RegisterHandelers()
 		{
@@ -118,13 +161,25 @@ namespace CloneDroneModdedMultiplayer.Internal
 			MapSendingMessge = new MapSendingMessge();
 			NetworkManager.AddNetworkMessage(MapSendingMessge, owner);
 
-			PlayerSpawnMessage = new PlayerConnectedMessage();
-			NetworkManager.AddNetworkMessage(PlayerSpawnMessage, owner);
+			PlayerConnectMessage = new PlayerConnectedMessage();
+			NetworkManager.AddNetworkMessage(PlayerConnectMessage, owner);
+
+			SpawnPlayerMessage = new SpawnPlayerMessage();
+			NetworkManager.AddNetworkMessage(SpawnPlayerMessage, owner);
+
+			SetLocalPlayerMessage = new SetLocalPlayerMessage();
+			NetworkManager.AddNetworkMessage(SetLocalPlayerMessage, owner);
+
+			DebugMessage = new DebugMessage();
+			NetworkManager.AddNetworkMessage(DebugMessage, owner);
 		}
 
-        public static ushort GetNextNetworkID()
+		static volatile ushort currentPlayerID = 0;
+        public static ushort GetNextPlayerID()
         {
-            return 0;
+			ushort playerID = currentPlayerID;
+			currentPlayerID++;
+			return playerID;
         }
 
     }
@@ -133,7 +188,6 @@ namespace CloneDroneModdedMultiplayer.Internal
     {
         public ushort PlayerID;
 		public readonly ushort ServerOwnerClientNetworkID;
-		public bool IsLocalPlayer;
 		public EnemyType CharacterModelOverrideType;
 		public Color PlayerColor;
 

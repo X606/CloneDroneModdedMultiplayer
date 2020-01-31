@@ -11,7 +11,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 {
     public static partial class NetworkingCore
     {
-        public const int UdpPackageSize = 34;
+        public const int UdpPackageSize = 66;
         public const int TARGET_TPS = 60;
 
         public static ClientType CurrentClientType { get; private set; } = ClientType.Unknown;
@@ -29,9 +29,10 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         {
             lock(_scheduledForMainThread)
             {
-                foreach(Action item in _scheduledForMainThread)
+				for(int i = 0; i < _scheduledForMainThread.Count; i++)
                 {
-                    try
+					Action item = _scheduledForMainThread[i];
+					try
                     {
                         item();
                     } catch(Exception e)
@@ -48,7 +49,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 	public class QueuedNetworkMessage
 	{
 		public byte[] DataToSend;
-		public int? TargetConnection = null;
+		public ushort? TargetConnection = null;
 	}
 
 }

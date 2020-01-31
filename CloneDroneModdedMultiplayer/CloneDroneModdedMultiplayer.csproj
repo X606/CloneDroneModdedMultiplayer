@@ -90,8 +90,10 @@
     <Compile Include="HighLevelNetworking\NetworkedModAttribute.cs" />
     <Compile Include="HighLevelNetworking\NetworkManager.cs" />
     <Compile Include="HighLevelNetworking\NetworkMessageBase.cs" />
+    <Compile Include="Internal\Messages\DebugMessage.cs" />
     <Compile Include="Internal\Messages\MapSendingMessge.cs" />
     <Compile Include="Internal\Messages\PlayerConnectedMessage.cs" />
+    <Compile Include="Internal\Messages\SetLocalPlayerMessage.cs" />
     <Compile Include="Internal\Messages\SpawnPlayerMessage.cs" />
     <Compile Include="Internal\ServerRunner.cs" />
     <Compile Include="LowLevelNetworking\Client.cs" />

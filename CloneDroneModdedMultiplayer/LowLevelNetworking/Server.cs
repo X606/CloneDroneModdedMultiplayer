@@ -15,9 +15,9 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         public static List<ConnectedClient> SERVER_ConnectedClients = new List<ConnectedClient>();
 
 		/// <summary>NOTE: This will run on a seperate thread</summary>
-		public static event Action<ConnectedClient, byte[]> OnServerTcpMessage;
+		public static event Action<ConnectedClient, byte[], ushort> OnServerTcpMessage;
 		/// <summary>NOTE: This will run on a seperate thread</summary>
-		public static event Action<ConnectedClient, byte[]> OnServerUdpMessage;
+		public static event Action<ConnectedClient, byte[], ushort> OnServerUdpMessage;
 
 		/// <summary>NOTE: This will run on a seperate thread</summary>
 		public static event Action<ConnectedClient> SERVER_OnClientConnected;
@@ -74,13 +74,13 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 							while(clientConnection.TcpConnection.Available > 0)
 							{
 								byte[] buffer = clientConnection.TcpRecive();
-								OnServerTcpMessage(clientConnection, buffer);
+								OnServerTcpMessage(clientConnection, buffer, clientConnection.ClientNetworkID);
 							}
 							EndPoint endPoint = clientConnection.TcpConnection.RemoteEndPoint;
 							while(clientConnection.UdpConnection.Available > 0)
 							{
 								byte[] buffer = clientConnection.UdpRecive();
-								OnServerUdpMessage(clientConnection, buffer);
+								OnServerUdpMessage(clientConnection, buffer, clientConnection.ClientNetworkID);
 							}
 							
 						}
@@ -90,6 +90,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 						while(_SERVER_queuedTcpNetworkMessages.Count > 0)
 						{
 							var msg = _SERVER_queuedTcpNetworkMessages.Dequeue();
+							ThreadSafeDebug.Log("sending tcp msg, length: " + msg.DataToSend.Length);
 							foreach(ConnectedClient clientConnection in SERVER_ConnectedClients)
 							{
 								if(msg.TargetConnection == null || msg.TargetConnection.Value == clientConnection.ClientNetworkID)
@@ -122,17 +123,18 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 			}
 		}
 
-		public static void SendServerTcpMessage(byte[] bytes)
+		public static void SendServerTcpMessage(byte[] bytes, ushort? target = null)
 		{
 			lock(_SERVER_queuedTcpNetworkMessages)
 			{
 				_SERVER_queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
 				{
-					DataToSend = bytes
+					DataToSend = bytes,
+					TargetConnection = target
 				});
 			}
 		}
-		public static void SendServerUdpMessage(byte[] bytes)
+		public static void SendServerUdpMessage(byte[] bytes, ushort? target = null)
 		{
 			if(bytes.Length != UdpPackageSize)
 				throw new Exception("All Udp messages must be " + UdpPackageSize + " bytes long.");
@@ -140,7 +142,8 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 			{
 				_SERVER_queuedUdpNetworkMessages.Enqueue(new QueuedNetworkMessage()
 				{
-					DataToSend = bytes
+					DataToSend = bytes,
+					TargetConnection = target
 				});
 			}
 

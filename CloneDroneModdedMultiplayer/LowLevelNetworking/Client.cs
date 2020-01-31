@@ -105,9 +105,9 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         {
             lock(_CLIENT_queuedTcpNetworkMessages)
             {
-                _CLIENT_queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
-                {
-                    DataToSend = bytes
+				_CLIENT_queuedTcpNetworkMessages.Enqueue(new QueuedNetworkMessage()
+				{
+					DataToSend = bytes
                 });
             }
         }
@@ -115,6 +115,7 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
         {
             if(bytes.Length != UdpPackageSize)
                 throw new Exception("All Udp messages must be " + UdpPackageSize + " bytes long.");
+
             lock(_CLIENT_queuedUdpNetworkMessages)
             {
                 _CLIENT_queuedUdpNetworkMessages.Enqueue(new QueuedNetworkMessage()

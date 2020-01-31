@@ -16,13 +16,13 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 
 		protected override void OnPackageReceivedClient(byte[] package)
 		{
+			ThreadSafeDebug.Log("2");
 			CreatedPlayerInfo playerInfo = new CreatedPlayerInfo();
 			playerInfo.DeserializeInto(package);
 
 			ServerRunner.Players.Add(playerInfo.PlayerID, new MultiplayerPlayer(playerInfo.PlayerID)
 			{
 				CharacterModelOverrideType = playerInfo.CharacterModelOverrideType,
-				IsLocalPlayer = playerInfo.IsLocalPlayer,
 				PlayerColor = playerInfo.PlayerColor,
 				PlayerUpgrades = playerInfo.PlayerUpgrades
 			});
@@ -33,6 +33,11 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 		{
 			byte[] data = playerInfo.SerializeToBytes();
 			Send(data);
+		}
+		public void SendTo(CreatedPlayerInfo playerInfo, ushort reciver)
+		{
+			byte[] data = playerInfo.SerializeToBytes();
+			SendTo(data, reciver);
 		}
 
 		public class CreatedPlayerInfo : IByteSerializable<CreatedPlayerInfo>
@@ -59,9 +64,6 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 				fileOffset += sizeof(float);
 				Buffer.BlockCopy(BitConverter.GetBytes(PlayerColor.a), 0, buffer, fileOffset, sizeof(float));
 				fileOffset += sizeof(float);
-
-				Buffer.BlockCopy(BitConverter.GetBytes(IsLocalPlayer), 0, buffer, fileOffset, sizeof(bool));
-				fileOffset += sizeof(bool);
 
 				Buffer.BlockCopy(BitConverter.GetBytes((int)CharacterModelOverrideType), 0, buffer, fileOffset, sizeof(float));
 				fileOffset += sizeof(int);
@@ -98,9 +100,6 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 				fileOffset += sizeof(float);
 				PlayerColor = color;
 
-				IsLocalPlayer = BitConverter.ToBoolean(data, fileOffset);
-				fileOffset += sizeof(bool);
-
 				CharacterModelOverrideType = (EnemyType)BitConverter.ToInt32(data, fileOffset);
 				fileOffset += sizeof(int);
 
@@ -122,7 +121,6 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 
 			public ushort PlayerID;
 			public Color PlayerColor;
-			public bool IsLocalPlayer;
 			public EnemyType CharacterModelOverrideType;
 
 			public Dictionary<UpgradeType, int> PlayerUpgrades;

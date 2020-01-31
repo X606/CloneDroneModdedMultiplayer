@@ -18,7 +18,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
         public abstract string Name { get; }
 		public abstract MessageChannel Channel { get; }
 
-        protected virtual void OnPackageReceivedServer(byte[] package)
+        protected virtual void OnPackageReceivedServer(byte[] package, ushort sourceClientID)
         {
         }
         protected virtual void OnPackageReceivedClient(byte[] package)
@@ -49,7 +49,7 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 			}
 		}
 
-        public void OnReceived(byte[] package, bool isServer)
+        public void OnReceived(byte[] package, bool isServer, ushort? clientID)
         {
             if (NetworkingCore.CurrentClientType == ClientType.Client)
 			{
@@ -57,7 +57,10 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 			}
 			else if(NetworkingCore.CurrentClientType == ClientType.Host)
 			{
-				OnPackageReceivedServer(package);
+				if(!clientID.HasValue)
+					throw new Exception("ERROR: clientId is null when getting message on server");
+
+				OnPackageReceivedServer(package, clientID.Value);
 			}
 
 		}
@@ -83,17 +86,68 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 			{
 				if(Channel == MessageChannel.Safe)
 				{
-					OnPackageReceivedClient(data); // since the server is itself kind of a client we call on received client locally too
+					NetworkingCore.ScheduleForMainThread(delegate
+					{
+						OnPackageReceivedClient(data); // since the server is itself kind of a client we call on received client locally too
+					});
 					NetworkingCore.SendServerTcpMessage(msg);
 				}
 				else if(Channel == MessageChannel.Unsafe)
 				{
-					OnPackageReceivedClient(data); // since the server is itself kind of a client we call on received client locally too
+					NetworkingCore.ScheduleForMainThread(delegate
+					{
+						OnPackageReceivedClient(data); // since the server is itself kind of a client we call on received client locally too
+					});
 					NetworkingCore.SendServerUdpMessage(msg);
 				}
 			}
 
         }
+
+		public void SendTo(byte[] data, ushort reciver)
+		{
+			if(Channel == MessageChannel.Unsafe && data.Length != MAX_UNSAFE_PACKAGE_SIZE)
+				throw new ArgumentException("The passed array must be " + MAX_UNSAFE_PACKAGE_SIZE + " long if the channel is set to unsafe", nameof(data));
+
+			byte[] msg = createFullMsg(FullMessageID, data);
+
+			if(NetworkingCore.CurrentClientType == ClientType.Client)
+			{
+				throw new Exception("Cannot send data to a reciver from a client");
+			}
+			else if(NetworkingCore.CurrentClientType == ClientType.Host)
+			{
+				if(Channel == MessageChannel.Safe)
+				{
+					if(reciver == 0) // if the target is the server, just run the function locally
+					{
+						NetworkingCore.ScheduleForMainThread(delegate
+						{
+							OnPackageReceivedClient(data);
+						});
+					} else
+					{
+						NetworkingCore.SendServerTcpMessage(msg, reciver);
+					}
+					
+				}
+				else if(Channel == MessageChannel.Unsafe)
+				{
+					if(reciver == 0) // if the target is the server, just run the function locally
+					{
+						NetworkingCore.ScheduleForMainThread(delegate
+						{
+							OnPackageReceivedClient(data);
+						});
+						
+					}
+					else
+					{
+						NetworkingCore.SendServerUdpMessage(msg, reciver);
+					}
+				}
+			}
+		}
 
         byte[] createFullMsg(MessageID msgID, byte[] package)
         {

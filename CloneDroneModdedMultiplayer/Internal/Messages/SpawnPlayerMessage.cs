@@ -18,11 +18,18 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 		{
 			Send(spawnedPlayerInfo.SerializeToBytes());
 		}
+		public void SendTo(SpawnedPlayerInfo spawnedPlayerInfo, ushort reciver)
+		{
+			SendTo(spawnedPlayerInfo.SerializeToBytes(), reciver);
+		}
 		protected override void OnPackageReceivedClient(byte[] package)
 		{
+			ThreadSafeDebug.Log("3");
+
 			SpawnedPlayerInfo playerInfo = new SpawnedPlayerInfo();
 			playerInfo.DeserializeInto(package);
 
+			ServerRunner.SpawnPhysicalPlayer(playerInfo.PlayerID, playerInfo.Position, playerInfo.Rotation);
 
 		}
 
