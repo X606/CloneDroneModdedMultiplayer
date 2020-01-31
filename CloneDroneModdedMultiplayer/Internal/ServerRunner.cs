@@ -69,8 +69,6 @@ namespace CloneDroneModdedMultiplayer.Internal
 			byte[] bytes = File.ReadAllBytes(levelPath);
 			MapSendingMessge.SendTo(bytes, client.ClientNetworkID); // send map to other client
 
-			ThreadSafeDebug.Log("bruh1");
-
 			ushort playerID = GetNextPlayerID();
 
 			SetLocalPlayerMessage.SendTo(playerID, client.ClientNetworkID);
@@ -84,8 +82,6 @@ namespace CloneDroneModdedMultiplayer.Internal
 			};
 			PlayerConnectMessage.Send(createdPlayerInfo);
 
-			ThreadSafeDebug.Log("bruh2");
-
 			var spawnPlayerMessage = new SpawnPlayerMessage.SpawnedPlayerInfo()
 			{
 				PlayerID = playerID,
@@ -93,8 +89,6 @@ namespace CloneDroneModdedMultiplayer.Internal
 				Rotation = 0f
 			};
 			SpawnPlayerMessage.Send(spawnPlayerMessage);
-
-			ThreadSafeDebug.Log("bruh3");
 		}
 
 		public static void StartClient(string ip, int port = 8606)

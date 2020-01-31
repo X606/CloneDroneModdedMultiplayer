@@ -90,7 +90,6 @@ namespace CloneDroneModdedMultiplayer.LowLevelNetworking
 						while(_SERVER_queuedTcpNetworkMessages.Count > 0)
 						{
 							var msg = _SERVER_queuedTcpNetworkMessages.Dequeue();
-							ThreadSafeDebug.Log("sending tcp msg, length: " + msg.DataToSend.Length);
 							foreach(ConnectedClient clientConnection in SERVER_ConnectedClients)
 							{
 								if(msg.TargetConnection == null || msg.TargetConnection.Value == clientConnection.ClientNetworkID)

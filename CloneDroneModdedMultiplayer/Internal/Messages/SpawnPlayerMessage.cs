@@ -24,8 +24,6 @@ namespace CloneDroneModdedMultiplayer.Internal.Messages
 		}
 		protected override void OnPackageReceivedClient(byte[] package)
 		{
-			ThreadSafeDebug.Log("3");
-
 			SpawnedPlayerInfo playerInfo = new SpawnedPlayerInfo();
 			playerInfo.DeserializeInto(package);
 

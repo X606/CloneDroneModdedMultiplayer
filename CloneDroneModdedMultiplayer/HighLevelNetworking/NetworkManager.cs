@@ -47,12 +47,10 @@ namespace CloneDroneModdedMultiplayer.HighLevelNetworking
 
 		static void OnMessage(byte[] arg2, bool isServer, ushort? clientID)
 		{
-			ThreadSafeDebug.Log("Got message! length: " + arg2.Length);
 
 			NetworkingCore.ScheduleForMainThread(delegate
 			{
 				MessageID messageID = new MessageID(arg2);
-				ThreadSafeDebug.Log("MessageModId: " + messageID.ModID + ", MessageMsgID: " + messageID.MsgID);
 
 				if(_networkMessagesDictionary.TryGetValue(messageID, out NetworkMessageBase networkMessage))
 				{
