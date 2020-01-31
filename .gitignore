@@ -351,3 +351,7 @@ MigrationBackup/
 
 # Ignore .zip files, this is mostly so that the built version is not included in the commit
 *.zip
+
+# Ignore ips.cfg and path.cfg since they will be different for everyone and are auto generated
+ips.cfg
+path.cfg

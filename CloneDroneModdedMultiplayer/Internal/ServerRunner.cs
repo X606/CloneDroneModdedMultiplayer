@@ -51,7 +51,7 @@ namespace CloneDroneModdedMultiplayer.Internal
 
                 NetworkingCore.StartServer(port);
 
-				RegisterHandelers();
+				RegisterNetworkMessageHandelers();
 				
                 CurrentGameData.CurentLevelID = "ModdedMultiplayerTestLevel.json";
 
@@ -64,7 +64,7 @@ namespace CloneDroneModdedMultiplayer.Internal
 		static void SERVER_OnClientConnected(ConnectedClient client) // this will NOT run in the main thread
 		{
 			ThreadSafeDebug.Log("Client connected from " + client.TcpConnection.RemoteEndPoint.ToString());
-			/*
+			
 			string levelPath = LevelManager.Instance.GetCurrentLevelDescription().LevelJSONPath;
 			byte[] bytes = File.ReadAllBytes(levelPath);
 			MapSendingMessge.SendTo(bytes, client.ClientNetworkID); // send map to other client
@@ -95,22 +95,6 @@ namespace CloneDroneModdedMultiplayer.Internal
 			SpawnPlayerMessage.Send(spawnPlayerMessage);
 
 			ThreadSafeDebug.Log("bruh3");
-			*/
-
-			byte[] buffer = new byte[10];
-			for(int i = 0; i < buffer.Length; i++)
-			{
-				buffer[i] = (byte)i;
-			}
-
-			DebugMessage.Send(buffer);
-
-			DebugMessage.Send(buffer);
-
-			DebugMessage.Send(buffer);
-
-			DebugMessage.Send(buffer);
-
 		}
 
 		public static void StartClient(string ip, int port = 8606)
@@ -122,7 +106,7 @@ namespace CloneDroneModdedMultiplayer.Internal
 				NetworkingCore.StartClient(ip, port);
 				ThreadSafeDebug.Log("Connected!");
 
-				RegisterHandelers();
+				RegisterNetworkMessageHandelers();
 
 				MapSendingMessge.OnMapSpawnedClient += delegate
 				{
@@ -155,7 +139,7 @@ namespace CloneDroneModdedMultiplayer.Internal
 		public static SetLocalPlayerMessage SetLocalPlayerMessage;
 		public static DebugMessage DebugMessage;
 
-		public static void RegisterHandelers()
+		public static void RegisterNetworkMessageHandelers()
 		{
 			Mod owner = Main.Instance;
 			MapSendingMessge = new MapSendingMessge();
